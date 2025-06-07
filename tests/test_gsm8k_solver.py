@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
-from llm_benchmarks.gsm8k_solver import GSM8KSolver
-from llm_benchmarks.model.model import OpenRouterPrompt
+from llm_benchmarks.solvers.gsm8k_solver import GSM8KSolver
+from llm_benchmarks.solvers.gsm8k_solver import OpenRouterPrompt as PatchedOpenRouterPrompt
 
 # Prompt template to be used in tests
 PROMPT_TEMPLATE = "Solve the following math problem: {content}. The final answer is "
@@ -16,7 +16,7 @@ def mock_open_router_prompt(mocker):
 
     # Patch OpenRouterPrompt in the gsm8k_solver module where it's used
     mocker.patch(
-        "llm_benchmarks.gsm8k_solver.OpenRouterPrompt",
+        "llm_benchmarks.solvers.gsm8k_solver.OpenRouterPrompt",
         return_value=mock_prompt_instance,
     )
     return mock_prompt_instance
@@ -46,9 +46,9 @@ def test_gsm8k_solver_init(mock_open_router_prompt):
     # Let's adjust the fixture slightly to make this easier or assert differently.
 
     # The fixture `mock_open_router_prompt` is the *instance*.
-    # The class `llm_benchmarks.gsm8k_solver.OpenRouterPrompt` was patched.
+    # The class `llm_benchmarks.solvers.gsm8k_solver.OpenRouterPrompt` was patched.
     # So, we can assert that the patched class was called correctly.
-    from llm_benchmarks.gsm8k_solver import OpenRouterPrompt as PatchedOpenRouterPrompt
+    from llm_benchmarks.solvers.gsm8k_solver import OpenRouterPrompt as PatchedOpenRouterPrompt
 
     PatchedOpenRouterPrompt.assert_called_once_with(
         prompt=PROMPT_TEMPLATE, model=model_name

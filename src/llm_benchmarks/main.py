@@ -3,8 +3,8 @@ import os
 import re
 from dotenv import load_dotenv
 
-from llm_benchmarks.data.gsm8k import GSM8KDataset
-from llm_benchmarks.gsm8k_solver import GSM8KSolver
+from .data.gsm8k import GSM8KDataset  # Adjusted import
+from .solvers.gsm8k_solver import GSM8KSolver  # Adjusted import
 
 # Load environment variables from .env file
 load_dotenv()
