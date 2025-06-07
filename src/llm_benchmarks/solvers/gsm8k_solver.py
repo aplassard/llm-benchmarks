@@ -46,6 +46,10 @@ class GSM8KSolver:
         match_model = re.search(r"The final answer is \$?([\d,]*\.?\d+)", model_response)
         if match_model:
             extracted_model_answer = match_model.group(1).replace(',', '')
+            if extracted_model_answer.endswith(".00"):
+                extracted_model_answer = extracted_model_answer[:-3]
+            elif extracted_model_answer.endswith(".0"):
+                extracted_model_answer = extracted_model_answer[:-2]
         else:
             extracted_model_answer = None
 

@@ -105,12 +105,18 @@ def test_solve_extracts_answer_correctly(mock_open_router_prompt, verbose_flag, 
 @pytest.mark.parametrize(
     "question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction",
     [
-        # Original case (adapted)
+        # Original case
         ("What is 5 / 2?", "The final answer is 2.5", "#### 0.0", "0.0", "2.5"),
-        # New cases
-        ("What is 10.00 dollars?", "The final answer is $10.00.", "#### 0.0", "0.0", "10.00"),
-        ("What is 36 dollars with extra text?", "The final answer is $36. Caleb spent $36 more on ice cream than on frozen yoghurt.", "#### 0.0", "0.0", "36"),
+        # Updated existing case for new logic
+        ("What is 10.00 dollars?", "The final answer is $10.00.", "#### 0", "0", "10"), # Note: expected_true_answer_extraction could be "0" if we assume ground truth is int
+        # Existing case that should be unaffected by new logic if it's not .0 or .00
+        ("What is 36 dollars with extra text?", "The final answer is $36. Caleb spent $36 more on ice cream than on frozen yoghurt.", "#### 0", "0", "36"), # Expect "36"
         ("What is 1,234.56 dollars?", "The final answer is $1,234.56", "#### 0.0", "0.0", "1234.56"),
+        # New test cases for specific stripping behavior
+        ("What is 25.0?", "The final answer is 25.0", "#### 0", "0", "25"),
+        ("What is 123.000?", "The final answer is 123.000", "#### 0.0", "0.0", "123.000"), # Current logic only handles .0 and .00
+        ("What is 10.50?", "The final answer is 10.50", "#### 0.0", "0.0", "10.50"),
+        ("What is 1,234.00 dollars?", "The final answer is $1,234.00", "#### 0", "0", "1234"),
     ],
 )
 def test_solve_extracts_answer_with_decimal_correctly(mock_open_router_prompt, verbose_flag, question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction):
