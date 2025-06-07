@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from llm_benchmarks.solvers.gsm8k_solver import GSM8KSolver
+from llm_benchmarks.solvers import GSM8KSolver
 from llm_benchmarks.solvers.gsm8k_solver import OpenRouterPrompt
 
 # Prompt template to be used in tests
