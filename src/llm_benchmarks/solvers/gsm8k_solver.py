@@ -13,18 +13,11 @@ class GSM8KSolver:
 
         # Extract the answer using a regex
         # This regex looks for a number (integer or decimal)
-        # that follows "The final answer is ".
-        match = re.search(r"The final answer is (\d+\.?\d*)", response)
+        # that follows "The final answer is " and stops at a word boundary.
+        match = re.search(r"The final answer is (\d+\.?\d*)\b", response)
         if match:
             return match.group(1)
-        else:
-            # Fallback regex: look for any number in the response
-            # if the preferred format is not found.
-            fallback_match = re.search(r"(\d+\.?\d+)", response)
-            if fallback_match:
-                return fallback_match.group(1)
-            else:
-                return None
+        return None
 
     def __call__(self, question: str) -> str | None:
         return self.solve(question)
