@@ -136,3 +136,68 @@ def test_call_method_works(mocker):
     
     # 2. Check that execute_prompt was called with the correct argument
     prompt_instance.execute_prompt.assert_called_once_with(content)
+
+# run tests with a real model
+@pytest.mark.integration
+def test_openrouter_prompt_with_real_model():
+    """
+    An integration test to verify the OpenRouterPrompt class works with a real model.
+    This test makes a live network call and requires a valid API key.
+    """
+    # 1. Setup: Choose a fast, free model and a simple prompt.
+    # The prompt template must contain '{content}'.
+    prompt_template = "Please answer the following question concisely: {content}"
+    
+    # We use a reliable and free model for this test.
+    # You can find model names on the OpenRouter website.
+    model_name = "mistralai/mistral-7b-instruct"
+    
+    # Instantiate your class
+    prompt_instance = OpenRouterPrompt(prompt=prompt_template, model=model_name)
+    
+    # 2. Action: Execute the prompt with a simple question.
+    question_content = "What is the capital of France?"
+    response = prompt_instance(question_content) # Using the __call__ method
+    
+    # 3. Assertions: We check for a reasonable response.
+    # We cannot check for an exact string like "Paris", because models can be verbose.
+    # Instead, we perform more robust checks.
+    
+    print(f"\nModel Response for Integration Test: '{response}'") # Helpful for debugging
+    
+    assert isinstance(response, str), "The response should be a string."
+    assert "Error:" not in response, "The response should not be an error message."
+    assert len(response) > 0, "The response should not be empty."
+    
+    # Check for the keyword. This is more robust than an exact match.
+    assert "Paris" in response, "The response should contain the keyword 'Paris'."
+
+@pytest.mark.integration
+def test_openrouter_prompt_with_default_model():
+    """
+    An integration test to verify the OpenRouterPrompt class works with a real model.
+    This test makes a live network call and requires a valid API key.
+    """
+    # 1. Setup: Choose a fast, free model and a simple prompt.
+    # The prompt template must contain '{content}'.
+    prompt_template = "Please answer the following question concisely: {content}"
+        
+    # Instantiate your class
+    prompt_instance = OpenRouterPrompt(prompt=prompt_template)
+    
+    # 2. Action: Execute the prompt with a simple question.
+    question_content = "What is the capital of France?"
+    response = prompt_instance(question_content) # Using the __call__ method
+    
+    # 3. Assertions: We check for a reasonable response.
+    # We cannot check for an exact string like "Paris", because models can be verbose.
+    # Instead, we perform more robust checks.
+    
+    print(f"\nModel Response for Integration Test: '{response}'") # Helpful for debugging
+    
+    assert isinstance(response, str), "The response should be a string."
+    assert "Error:" not in response, "The response should not be an error message."
+    assert len(response) > 0, "The response should not be empty."
+    
+    # Check for the keyword. This is more robust than an exact match.
+    assert "Paris" in response, "The response should contain the keyword 'Paris'."
