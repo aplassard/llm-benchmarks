@@ -1,6 +1,8 @@
+import logging
 import re
 from llm_benchmarks.model.model import OpenRouterPrompt
 
+logger = logging.getLogger(__name__)
 
 # Definition of GSM8KResult (NEW)
 class GSM8KResult:
@@ -59,11 +61,11 @@ class GSM8KSolver:
 
         # NEW: Verbose printing logic
         if self.verbose:
-            print(f"Question: {question}")
-            print(f"Ground Truth Answer (Full): {true_answer_full}")
-            print(f"Ground Truth Answer (Extracted): {extracted_true_answer}")
-            print(f"Model's Full Response: {model_response}")
-            print(f"Model's Predicted Answer (Extracted): {extracted_model_answer}")
+            logger.info(f"Question: {question}")
+            logger.info(f"Ground Truth Answer (Full): {true_answer_full}")
+            logger.info(f"Ground Truth Answer (Extracted): {extracted_true_answer}")
+            logger.info(f"Model's Full Response: {model_response}")
+            logger.info(f"Model's Predicted Answer (Extracted): {extracted_model_answer}")
 
             # A prediction is correct if both extracted answers are not None and they match.
             is_correct = (
@@ -71,7 +73,7 @@ class GSM8KSolver:
                 and extracted_true_answer is not None
                 and extracted_model_answer == extracted_true_answer
             )
-            print(f"Result: {'CORRECT' if is_correct else 'INCORRECT'}")
+            logger.info(f"Result: {'CORRECT' if is_correct else 'INCORRECT'}")
 
         return GSM8KResult(
             question=question,
