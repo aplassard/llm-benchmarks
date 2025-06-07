@@ -74,5 +74,6 @@ class GSM8KSolver:
             extracted_true_answer=extracted_true_answer,
         )
 
-    def __call__(self, question: str, true_answer_full: str) -> GSM8KResult: # Also update __call__
-        return self.solve(question, true_answer_full)
+    def __call__(self, question: str, true_answer_full: str) -> GSM8KResult: # Signature remains the same
+        # MODIFIED LINE:
+        return self.solve(question, true_answer_full=true_answer_full)
