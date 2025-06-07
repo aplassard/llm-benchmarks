@@ -43,8 +43,15 @@ class GSM8KSolver:
         model_response = self.model.execute_prompt(content=question)
 
         # Extract the answer from model's response
-        match_model = re.search(r"The final answer is (\d+\.?\d*)\b", model_response) # Corrected regex \b
-        extracted_model_answer = match_model.group(1) if match_model else None
+        match_model = re.search(r"The final answer is \$?([\d,]*\.?\d+)", model_response)
+        if match_model:
+            extracted_model_answer = match_model.group(1).replace(',', '')
+            if extracted_model_answer.endswith(".00"):
+                extracted_model_answer = extracted_model_answer[:-3]
+            elif extracted_model_answer.endswith(".0"):
+                extracted_model_answer = extracted_model_answer[:-2]
+        else:
+            extracted_model_answer = None
 
         # Extract the true answer from the provided full string
         # This will use the actual moved/imported function in later steps

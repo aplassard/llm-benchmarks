@@ -1,7 +1,7 @@
 # tests/test_model.py
 
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import httpx
 
 # Import the specific exceptions from the openai library to simulate errors
@@ -125,23 +125,30 @@ def test_call_method_works(mocker):
     This is a simple test to ensure the syntactic sugar works as intended.
     """
     # Setup
-    prompt_instance = OpenRouterPrompt(prompt="Test: {content}")
+    # Patch openai.OpenAI to prevent actual client instantiation during OpenRouterPrompt init
+    with patch("llm_benchmarks.model.model.OpenAI") as mock_openai_client_class:
+        mock_openai_instance = MagicMock()
+        mock_openai_client_class.return_value = mock_openai_instance
 
-    # We can mock the instance's own method to isolate the __call__ logic
-    mocker.patch.object(
-        prompt_instance, "execute_prompt", return_value="execute_prompt was called"
-    )
+        prompt_instance = OpenRouterPrompt(prompt="Test: {content}")
 
-    # Action: Call the instance like a function
-    content = "my content"
-    result = prompt_instance(content)
+        # We can mock the instance's own method to isolate the __call__ logic
+        mocker.patch.object(
+            prompt_instance, "execute_prompt", return_value="execute_prompt was called"
+        )
 
-    # Assertions
-    # 1. Check that the result is passed through correctly
-    assert result == "execute_prompt was called"
+        # Action: Call the instance like a function
+        content = "my content"
+        result = prompt_instance(content)
 
-    # 2. Check that execute_prompt was called with the correct argument
-    prompt_instance.execute_prompt.assert_called_once_with(content)
+        # Assertions
+        # 1. Check that the result is passed through correctly
+        assert result == "execute_prompt was called"
+
+        # 2. Check that execute_prompt was called with the correct argument
+        prompt_instance.execute_prompt.assert_called_once_with(content)
+        # Ensure OpenAI client was attempted to be created
+        mock_openai_client_class.assert_called_once()
 
 
 # run tests with a real model

@@ -75,39 +75,62 @@ def test_gsm8k_solver_init(verbose_flag):
 
 
 @pytest.mark.parametrize("verbose_flag", [True, False])
-def test_solve_extracts_answer_correctly(mock_open_router_prompt, verbose_flag):
-    question = "What is 2 + 2?"
-    mock_response_content = "The final answer is 4"
+@pytest.mark.parametrize(
+    "question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction",
+    [
+        # Original case (adapted)
+        ("What is 2 + 2?", "The final answer is 4", "#### 0", "0", "4"),
+        # New cases
+        ("What is 10 dollars?", "The final answer is $10.", "#### 0", "0", "10"),
+        ("What is 320 dollars?", "The final answer is $320", "#### 0", "0", "320"),
+        ("What is 558 dollars?", "The final answer is $558", "#### 0", "0", "558"),
+        ("What is 1,000 dollars?", "The final answer is 1,000", "#### 0", "0", "1000"),
+    ],
+)
+def test_solve_extracts_answer_correctly(mock_open_router_prompt, verbose_flag, question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction):
     mock_open_router_prompt.execute_prompt.return_value = mock_response_content
-
-    true_answer_full_dummy = "#### 0" # Extracted will be "0"
-
     solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
     result = solver.solve(question, true_answer_full=true_answer_full_dummy)
 
     assert isinstance(result, GSM8KResult)
     assert result.question == question
     assert result.model_response == mock_response_content
-    assert result.extracted_model_answer == "4"
+    assert result.extracted_model_answer == expected_model_answer_extraction
     assert result.true_answer_full == true_answer_full_dummy
-    assert result.extracted_true_answer == "0"
+    assert result.extracted_true_answer == expected_true_answer_extraction
     mock_open_router_prompt.execute_prompt.assert_called_once_with(content=question)
 
 
 @pytest.mark.parametrize("verbose_flag", [True, False])
-def test_solve_extracts_answer_with_decimal_correctly(mock_open_router_prompt, verbose_flag):
-    question = "What is 5 / 2?"
-    mock_response_content = "The final answer is 2.5"
+@pytest.mark.parametrize(
+    "question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction",
+    [
+        # Original case
+        ("What is 5 / 2?", "The final answer is 2.5", "#### 0.0", "0.0", "2.5"),
+        # Updated existing case for new logic
+        ("What is 10.00 dollars?", "The final answer is $10.00.", "#### 0", "0", "10"), # Note: expected_true_answer_extraction could be "0" if we assume ground truth is int
+        # Existing case that should be unaffected by new logic if it's not .0 or .00
+        ("What is 36 dollars with extra text?", "The final answer is $36. Caleb spent $36 more on ice cream than on frozen yoghurt.", "#### 0", "0", "36"), # Expect "36"
+        ("What is 1,234.56 dollars?", "The final answer is $1,234.56", "#### 0.0", "0.0", "1234.56"),
+        # New test cases for specific stripping behavior
+        ("What is 25.0?", "The final answer is 25.0", "#### 0", "0", "25"),
+        ("What is 123.000?", "The final answer is 123.000", "#### 0.0", "0.0", "123.000"), # Current logic only handles .0 and .00
+        ("What is 10.50?", "The final answer is 10.50", "#### 0.0", "0.0", "10.50"),
+        ("What is 1,234.00 dollars?", "The final answer is $1,234.00", "#### 0", "0", "1234"),
+    ],
+)
+def test_solve_extracts_answer_with_decimal_correctly(mock_open_router_prompt, verbose_flag, question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction):
     mock_open_router_prompt.execute_prompt.return_value = mock_response_content
-
-    true_answer_full_dummy = "#### 0.0"
-
     solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
     result = solver.solve(question, true_answer_full=true_answer_full_dummy)
 
     assert isinstance(result, GSM8KResult)
-    assert result.extracted_model_answer == "2.5"
-    assert result.extracted_true_answer == "0.0"
+    assert result.question == question
+    assert result.model_response == mock_response_content
+    assert result.extracted_model_answer == expected_model_answer_extraction
+    assert result.true_answer_full == true_answer_full_dummy
+    assert result.extracted_true_answer == expected_true_answer_extraction
+    mock_open_router_prompt.execute_prompt.assert_called_once_with(content=question)
 
 
 # test_solve_fallback_regex_extracts_answer is removed as it's redundant.
@@ -131,11 +154,17 @@ def test_solve_returns_none_if_no_answer_found(mock_open_router_prompt, verbose_
 
 
 @pytest.mark.parametrize("verbose_flag", [True, False])
-def test_call_method_works(mocker, verbose_flag):
+def test_call_method_works(mocker, verbose_flag): # mocker is already a fixture
     model_name = "test/model"
-    solver = GSM8KSolver(model_name=model_name, prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
 
-    question = "A test question"
+    # Patch OpenRouterPrompt to prevent real OpenAI client instantiation
+    with patch("llm_benchmarks.solvers.gsm8k_solver.OpenRouterPrompt") as mock_orp_class:
+        mock_orp_instance = MagicMock()
+        mock_orp_class.return_value = mock_orp_instance
+
+        solver = GSM8KSolver(model_name=model_name, prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
+
+        question = "A test question"
     true_answer_full_dummy = "#### 0"
 
     # Prepare a mock GSM8KResult object to be returned by the mocked solve method
