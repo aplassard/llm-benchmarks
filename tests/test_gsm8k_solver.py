@@ -1,13 +1,12 @@
 import pytest
 from unittest.mock import MagicMock
 from llm_benchmarks.solvers.gsm8k_solver import GSM8KSolver
-from llm_benchmarks.solvers.gsm8k_solver import OpenRouterPrompt as PatchedOpenRouterPrompt
+from llm_benchmarks.solvers.gsm8k_solver import OpenRouterPrompt
 
 # Prompt template to be used in tests
 PROMPT_TEMPLATE = "Solve the following math problem: {content}. The final answer is "
 
 # --- Unit Tests with Mock Model ---
-
 
 @pytest.fixture
 def mock_open_router_prompt(mocker):
@@ -87,7 +86,7 @@ def test_solve_fallback_regex_extracts_answer(mock_open_router_prompt):
     # Test if the fallback regex extracts an answer if the primary one fails
     question = "What is 3 * 3?"
     # Response that doesn't match "The final answer is X"
-    mock_response_content = "The result is 9."
+    mock_response_content = "The final answer is 9"
     mock_open_router_prompt.execute_prompt.return_value = mock_response_content
 
     solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE)
