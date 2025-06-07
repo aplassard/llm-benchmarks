@@ -5,13 +5,15 @@ from dotenv import load_dotenv
 # Load environment variables from a .env file
 load_dotenv()
 
+
 class OpenRouterPrompt:
     """
     Class to interact with OpenRouter API using a prompt template.
     The prompt must contain a '{content}' placeholder.
     """
+
     def __init__(self, prompt: str, model: str = "deepseek/deepseek-r1-0528:free"):
-        if '{content}' not in prompt:
+        if "{content}" not in prompt:
             raise ValueError("Prompt must contain a '{content}' placeholder.")
         self.prompt = prompt
         self.model = model

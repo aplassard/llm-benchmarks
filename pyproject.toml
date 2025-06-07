@@ -17,6 +17,9 @@ dependencies = [
     "ruff>=0.11.13",
 ]
 
+[project.scripts]
+gsm8k-benchmark = "llm_benchmarks.main:main"
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
