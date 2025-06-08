@@ -29,7 +29,6 @@ class GSM8KDataset:
                 f"Invalid config '{config}'. Please choose 'main' or 'socratic'."
             )
 
-        # Load the specified split of the gsm8k dataset from Hugging Face
         try:
             self.dataset = load_dataset("gsm8k", name=config, split=split)
         except Exception as e:
