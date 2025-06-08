@@ -3,7 +3,7 @@ import logging
 import os
 # import re # No longer needed
 from dotenv import load_dotenv
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from .data import GSM8KDataset  # Adjusted import
 from .solvers import GSM8KSolver  # Adjusted import
@@ -31,12 +31,18 @@ class TqdmLoggingHandler(logging.Handler):
 
 def main():
     # Configure logging
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+
+    # Add the handler to the root logger
     handler = TqdmLoggingHandler()
     handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
-    logger.addHandler(handler)
-    logger.propagate = False
+    
+    # Check if a handler is already present to avoid duplicates
+    if not root_logger.handlers:
+        root_logger.addHandler(handler)
+    
+    logger = logging.getLogger(__name__)
 
     parser = argparse.ArgumentParser(description="Run GSM8K benchmark.")
     parser.add_argument(
@@ -163,8 +169,8 @@ def main():
             # The solver handles its own verbose printing for the attempt.
             # This verbose block is for main.py's context of *skipping*.
             if args.verbose:
-                print(f"  Skipped Question: {result.question}")
-                print(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
+                logger.info(f"  Skipped Question: {result.question}")
+                logger.info(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
             continue
 
         # If we reach here, ground truth was extractable.
@@ -179,13 +185,6 @@ def main():
         if result.extracted_model_answer is not None and \
            result.extracted_model_answer == result.extracted_true_answer:
             correct_answers += 1
-
-        # Optional: Print progress periodically if not verbose
-        # This progress message refers to items from the dataset *attempted* up to num_to_run,
-        # not necessarily successfully processed examples (total_examples).
-        # So, (i+1) is appropriate here.
-        if not args.verbose and (i + 1) % 10 == 0: # Note: tqdm provides progress, this might be redundant
-            logger.info(f"Attempted {i + 1}/{num_to_run} examples...")
 
     if total_examples > 0:
         accuracy = (correct_answers / total_examples) * 100
