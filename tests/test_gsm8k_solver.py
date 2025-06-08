@@ -51,9 +51,9 @@ def mock_open_router_prompt(mocker):
     return mock_prompt_instance
 
 
-@pytest.mark.parametrize("verbose_flag", [True, False])
-def test_gsm8k_solver_init(verbose_flag):
-    # Test if GSM8KSolver initializes OpenRouterPrompt correctly and sets verbose flag
+# @pytest.mark.parametrize("verbose_flag", [True, False]) # Removed parametrization
+def test_gsm8k_solver_init(): # Removed verbose_flag from signature
+    # Test if GSM8KSolver initializes OpenRouterPrompt correctly
     model_name = "test/model"
 
     # We need to patch OpenRouterPrompt for this test, as it's instantiated in __init__
@@ -64,17 +64,17 @@ def test_gsm8k_solver_init(verbose_flag):
         solver = GSM8KSolver(
             model_name=model_name,
             prompt_template=PROMPT_TEMPLATE,
-            verbose=verbose_flag,
+            # verbose=verbose_flag, # Removed verbose argument
         )
 
         mock_orp_class.assert_called_once_with(
             prompt=PROMPT_TEMPLATE, model=model_name
         )
         assert solver.model is mock_orp_instance
-        assert solver.verbose == verbose_flag
+        # assert solver.verbose == verbose_flag # Removed assertion for verbose attribute
 
 
-@pytest.mark.parametrize("verbose_flag", [True, False])
+# @pytest.mark.parametrize("verbose_flag", [True, False]) # Removed verbose_flag parametrization
 @pytest.mark.parametrize(
     "question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction",
     [
@@ -87,9 +87,9 @@ def test_gsm8k_solver_init(verbose_flag):
         ("What is 1,000 dollars?", "The final answer is 1,000", "#### 0", "0", "1000"),
     ],
 )
-def test_solve_extracts_answer_correctly(mock_open_router_prompt, verbose_flag, question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction):
+def test_solve_extracts_answer_correctly(mock_open_router_prompt, question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction): # Removed verbose_flag
     mock_open_router_prompt.execute_prompt.return_value = mock_response_content
-    solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
+    solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE) # Removed verbose=verbose_flag
     result = solver.solve(question, true_answer_full=true_answer_full_dummy)
 
     assert isinstance(result, GSM8KResult)
@@ -101,7 +101,7 @@ def test_solve_extracts_answer_correctly(mock_open_router_prompt, verbose_flag, 
     mock_open_router_prompt.execute_prompt.assert_called_once_with(content=question)
 
 
-@pytest.mark.parametrize("verbose_flag", [True, False])
+# @pytest.mark.parametrize("verbose_flag", [True, False]) # Removed verbose_flag parametrization
 @pytest.mark.parametrize(
     "question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction",
     [
@@ -119,9 +119,9 @@ def test_solve_extracts_answer_correctly(mock_open_router_prompt, verbose_flag, 
         ("What is 1,234.00 dollars?", "The final answer is $1,234.00", "#### 0", "0", "1234"),
     ],
 )
-def test_solve_extracts_answer_with_decimal_correctly(mock_open_router_prompt, verbose_flag, question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction):
+def test_solve_extracts_answer_with_decimal_correctly(mock_open_router_prompt, question, mock_response_content, true_answer_full_dummy, expected_true_answer_extraction, expected_model_answer_extraction): # Removed verbose_flag
     mock_open_router_prompt.execute_prompt.return_value = mock_response_content
-    solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
+    solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE) # Removed verbose=verbose_flag
     result = solver.solve(question, true_answer_full=true_answer_full_dummy)
 
     assert isinstance(result, GSM8KResult)
@@ -137,15 +137,15 @@ def test_solve_extracts_answer_with_decimal_correctly(mock_open_router_prompt, v
 # The current solver uses one regex for model response: r"The final answer is (\d+\.?\d*)\b"
 
 
-@pytest.mark.parametrize("verbose_flag", [True, False])
-def test_solve_returns_none_if_no_answer_found(mock_open_router_prompt, verbose_flag):
+# @pytest.mark.parametrize("verbose_flag", [True, False]) # Removed verbose_flag parametrization
+def test_solve_returns_none_if_no_answer_found(mock_open_router_prompt): # Removed verbose_flag
     question = "What is the capital of Mars?"
     mock_response_content = "There is no capital of Mars."
     mock_open_router_prompt.execute_prompt.return_value = mock_response_content
 
     true_answer_full_dummy = "#### N/A" # True answer might be non-numeric
 
-    solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
+    solver = GSM8KSolver(model_name="test/model", prompt_template=PROMPT_TEMPLATE) # Removed verbose=verbose_flag
     result = solver.solve(question, true_answer_full=true_answer_full_dummy)
 
     assert isinstance(result, GSM8KResult)
@@ -153,8 +153,8 @@ def test_solve_returns_none_if_no_answer_found(mock_open_router_prompt, verbose_
     assert result.extracted_true_answer is None # Based on "#### N/A" and current extract_gsm8k_answer
 
 
-@pytest.mark.parametrize("verbose_flag", [True, False])
-def test_call_method_works(mocker, verbose_flag): # mocker is already a fixture
+# @pytest.mark.parametrize("verbose_flag", [True, False]) # Removed verbose_flag parametrization
+def test_call_method_works(mocker): # Removed verbose_flag, mocker is already a fixture
     model_name = "test/model"
 
     # Patch OpenRouterPrompt to prevent real OpenAI client instantiation
@@ -162,7 +162,7 @@ def test_call_method_works(mocker, verbose_flag): # mocker is already a fixture
         mock_orp_instance = MagicMock()
         mock_orp_class.return_value = mock_orp_instance
 
-        solver = GSM8KSolver(model_name=model_name, prompt_template=PROMPT_TEMPLATE, verbose=verbose_flag)
+        solver = GSM8KSolver(model_name=model_name, prompt_template=PROMPT_TEMPLATE) # Removed verbose=verbose_flag
 
         question = "A test question"
     true_answer_full_dummy = "#### 0"
@@ -190,24 +190,22 @@ def test_call_method_works(mocker, verbose_flag): # mocker is already a fixture
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("verbose_flag", [True, False])
-def test_gsm8k_solver_with_real_model(verbose_flag):
+# @pytest.mark.parametrize("verbose_flag", [True, False]) # Removed verbose_flag parametrization
+def test_gsm8k_solver_with_real_model(): # Removed verbose_flag
     model_name = "mistralai/mistral-7b-instruct"
     prompt_for_real_model = """Question: {content}\n\nPlease provide a step-by-step solution and end your response with the phrase 'The final answer is X' where X is the numerical answer."""
-    solver = GSM8KSolver(model_name=model_name, prompt_template=prompt_for_real_model, verbose=verbose_flag)
+    solver = GSM8KSolver(model_name=model_name, prompt_template=prompt_for_real_model) # Removed verbose=verbose_flag
 
     question = "Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?"
     true_answer_full_dummy = "#### 72" # Expected: 48 + (48/2) = 72
 
     result = solver.solve(question, true_answer_full=true_answer_full_dummy)
 
-    print(f"\nIntegration Test (verbose={verbose_flag}) - Question: {result.question}")
-    # The solver will print details if verbose_flag is True.
-    # If not, we might want to print some info here for test logs.
-    if not verbose_flag:
-        print(f"Integration Test - Model Response (raw): {result.model_response}")
-        print(f"Integration Test - Extracted Model Answer: {result.extracted_model_answer}")
-        print(f"Integration Test - Extracted True Answer: {result.extracted_true_answer}")
+    print(f"\nIntegration Test - Question: {result.question}") # Updated print statement
+    # Unconditional printing for test logs
+    print(f"Integration Test - Model Response (raw): {result.model_response}")
+    print(f"Integration Test - Extracted Model Answer: {result.extracted_model_answer}")
+    print(f"Integration Test - Extracted True Answer: {result.extracted_true_answer}")
 
     assert isinstance(result, GSM8KResult)
     assert result.extracted_true_answer == "72"
@@ -216,22 +214,22 @@ def test_gsm8k_solver_with_real_model(verbose_flag):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("verbose_flag", [True, False])
-def test_gsm8k_solver_real_model_complex_question(verbose_flag):
+# @pytest.mark.parametrize("verbose_flag", [True, False]) # Removed verbose_flag parametrization
+def test_gsm8k_solver_real_model_complex_question(): # Removed verbose_flag
     model_name = "mistralai/mistral-7b-instruct"
     prompt_for_real_model = """Question: {content}\n\nPlease provide a step-by-step solution and end your response with the phrase 'The final answer is X' where X is the numerical answer."""
-    solver = GSM8KSolver(model_name=model_name, prompt_template=prompt_for_real_model, verbose=verbose_flag)
+    solver = GSM8KSolver(model_name=model_name, prompt_template=prompt_for_real_model) # Removed verbose=verbose_flag
 
     question = "Betty has 2 apples. She gives 1 to her friend. Then, she buys 3 more apples. How many apples does Betty have now?"
     true_answer_full_dummy = "#### 4" # Expected: 2 - 1 + 3 = 4
 
     result = solver.solve(question, true_answer_full=true_answer_full_dummy)
 
-    print(f"\nIntegration Test (verbose={verbose_flag}) - Question: {result.question}")
-    if not verbose_flag:
-        print(f"Integration Test - Model Response (raw): {result.model_response}")
-        print(f"Integration Test - Extracted Model Answer: {result.extracted_model_answer}")
-        print(f"Integration Test - Extracted True Answer: {result.extracted_true_answer}")
+    print(f"\nIntegration Test - Question: {result.question}") # Updated print statement
+    # Unconditional printing for test logs
+    print(f"Integration Test - Model Response (raw): {result.model_response}")
+    print(f"Integration Test - Extracted Model Answer: {result.extracted_model_answer}")
+    print(f"Integration Test - Extracted True Answer: {result.extracted_true_answer}")
 
     assert isinstance(result, GSM8KResult)
     assert result.extracted_true_answer == "4"
