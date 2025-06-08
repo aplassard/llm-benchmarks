@@ -1,8 +1,5 @@
 import argparse
-
-DEFAULT_PROMPT_TEMPLATE = """Question: {content}
-
-Please provide a step-by-step solution and end your response with the phrase 'The final answer is X' where X is the numerical answer."""
+from .prompt_utils import load_prompt, get_available_prompts
 
 def parse_arguments():
     """Parses command-line arguments."""
@@ -15,11 +12,12 @@ def parse_arguments():
         dest="model_name",  # Keep dest as model_name
     )
     parser.add_argument(
-        "--prompt-template",  # Changed from prompt_template
+        "--prompt-keyword",
         type=str,
-        default=DEFAULT_PROMPT_TEMPLATE,
-        help="Prompt template to use. Must include '{content}'.",
-        dest="prompt_template",  # Keep dest as prompt_template
+        default="default",
+        choices=get_available_prompts(), # Dynamically set choices
+        help="Keyword for the prompt to use. Corresponding <keyword>.txt file must exist in the prompts directory.",
+        dest="prompt_keyword", # Store the keyword here
     )
     parser.add_argument(
         "--num-examples",  # Changed from num_examples
@@ -53,4 +51,23 @@ def parse_arguments():
         help="Set the logging level. Must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL.", # Update help
         dest="log_level",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Load the prompt content using the keyword from args.prompt_keyword
+    # and store it in args.prompt_template
+    try:
+        # args.prompt_keyword will exist due to dest="prompt_keyword"
+        # The actual prompt content will be stored in args.prompt_template
+        args.prompt_template = load_prompt(args.prompt_keyword)
+    except FileNotFoundError:
+        # This path should ideally not be hit if 'choices' and 'default' work as expected,
+        # but it's a good safeguard.
+        parser.error(
+            f"Selected prompt file for keyword '{args.prompt_keyword}' not found. "
+            f"Available prompts: {', '.join(get_available_prompts())}"
+        )
+        # The line below is effectively dead code if parser.error exits, which it does.
+        # Keep for clarity if parser.error behavior changes or is mocked in a test.
+        # raise  # Re-raise the FileNotFoundError or handle appropriately
+
+    return args
