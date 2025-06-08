@@ -1,95 +1,38 @@
-import argparse
-import logging
+import logging # Still needed for logger = logging.getLogger(__name__)
 import os
 # import re # No longer needed
 from dotenv import load_dotenv
-from tqdm import tqdm
+from tqdm import tqdm # Still needed for progress bar
 
-from .data import GSM8KDataset  # Adjusted import
-from .solvers import GSM8KSolver  # Adjusted import
+from .data import GSM8KDataset
+from .solvers import GSM8KSolver
+from .utils.args import parse_arguments
+from .utils.logging import setup_logging # Import the new logging setup function
 
 # Load environment variables from .env file
 load_dotenv()
 
-DEFAULT_PROMPT_TEMPLATE = """Question: {content}
-
-Please provide a step-by-step solution and end your response with the phrase 'The final answer is X' where X is the numerical answer."""
-
-
-class TqdmLoggingHandler(logging.Handler):
-    def __init__(self, level=logging.NOTSET):
-        super().__init__(level)
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            tqdm.write(msg)
-            self.flush()
-        except Exception:
-            self.handleError(record)
-
+# TqdmLoggingHandler class definition removed
 
 def main():
-    # Configure logging
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    args = parse_arguments() # Call the new function for argument parsing
 
-    # Add the handler to the root logger
-    handler = TqdmLoggingHandler()
-    handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    # Call the new logging setup function
+    setup_logging(args.log_level)
     
-    # Check if a handler is already present to avoid duplicates
-    if not root_logger.handlers:
-        root_logger.addHandler(handler)
-    
+    # Get a logger for the main module, after setup_logging has configured the root logger
     logger = logging.getLogger(__name__)
 
-    parser = argparse.ArgumentParser(description="Run GSM8K benchmark.")
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        default="mistralai/mistral-7b-instruct",
-        help="Name of the model to use from OpenRouter.",
-    )
-    parser.add_argument(
-        "--prompt_template",
-        type=str,
-        default=DEFAULT_PROMPT_TEMPLATE,
-        help="Prompt template to use. Must include '{content}'.",
-    )
-    parser.add_argument(
-        "--num_examples",
-        type=int,
-        default=10,
-        help="Number of examples to run from the test set. Set to -1 to run all.",
-    )
-    parser.add_argument(
-        "--data_split",
-        type=str,
-        default="test",
-        choices=["train", "test"],
-        help="Dataset split to use for benchmarking.",
-    )
-    parser.add_argument(
-        "--data_config",
-        type=str,
-        default="main",
-        choices=["main", "socratic"],
-        help="Dataset configuration to use.",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Print detailed information for each example.",
-    )
-
-    args = parser.parse_args()
+    # Logging level info message is now part of setup_logging, or can be emitted here if preferred
+    # logger.info(f"Logging level set to {args.log_level}") # This is implicitly handled by setup_logging
 
     if not os.getenv("OPENROUTER_API_KEY"):
         logger.error("OPENROUTER_API_KEY environment variable not set.")
         logger.error("Please set it in your .env file or environment.")
         return
 
+    # Example of using logger after setup
+    logger.info(f"Using model: {args.model_name}")
     logger.info(
         f"Loading GSM8K dataset (split: {args.data_split}, config: {args.data_config})..."
     )
@@ -100,10 +43,9 @@ def main():
         return
 
     logger.info(f"Initializing GSM8KSolver with model: {args.model_name}...")
-    solver = GSM8KSolver( # MODIFIED - pass verbose
+    solver = GSM8KSolver(
         model_name=args.model_name,
         prompt_template=args.prompt_template,
-        verbose=args.verbose, # NEW
     )
 
     correct_answers = 0
@@ -168,9 +110,9 @@ def main():
             )
             # The solver handles its own verbose printing for the attempt.
             # This verbose block is for main.py's context of *skipping*.
-            if args.verbose:
-                logger.info(f"  Skipped Question: {result.question}")
-                logger.info(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
+            # We can use logger.debug for information previously shown with verbose flag
+            logger.debug(f"  Skipped Question: {result.question}")
+            logger.debug(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
             continue
 
         # If we reach here, ground truth was extractable.
