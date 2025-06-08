@@ -19,7 +19,7 @@ def test_load_default_prompt(mock_get_available_prompts, mock_load_prompt):
 
     with mock.patch('sys.argv', ['script_name']):
         args = parse_arguments()
-        assert args.prompt_keyword == 'default' # Check that the keyword defaults correctly
+        assert args.prompt == 'default' # Check that the keyword defaults correctly
         assert args.prompt_template == DEFAULT_PROMPT_CONTENT
         mock_load_prompt.assert_called_once_with('default')
         mock_get_available_prompts.assert_called_once()
@@ -32,9 +32,9 @@ def test_load_specific_prompt_rigorous(mock_get_available_prompts, mock_load_pro
     # Configure mock_load_prompt for 'rigorous'
     mock_load_prompt.side_effect = lambda keyword: RIGOROUS_PROMPT_CONTENT if keyword == 'rigorous' else None
 
-    with mock.patch('sys.argv', ['script_name', '--prompt-keyword', 'rigorous']):
+    with mock.patch('sys.argv', ['script_name', '--prompt', 'rigorous']):
         args = parse_arguments()
-        assert args.prompt_keyword == 'rigorous'
+        assert args.prompt == 'rigorous'
         assert args.prompt_template == RIGOROUS_PROMPT_CONTENT
         mock_load_prompt.assert_called_once_with('rigorous')
         mock_get_available_prompts.assert_called_once()
@@ -44,7 +44,7 @@ def test_load_invalid_choice_prompt(mock_get_available_prompts, capsys):
     """Tests behavior when an invalid prompt keyword (not in choices) is used."""
     mock_get_available_prompts.return_value = ['default', 'rigorous']
 
-    with mock.patch('sys.argv', ['script_name', '--prompt-keyword', 'non_existent_prompt']):
+    with mock.patch('sys.argv', ['script_name', '--prompt', 'non_existent_prompt']):
         with pytest.raises(SystemExit) as e:
             parse_arguments()
 
@@ -71,7 +71,7 @@ def test_load_prompt_file_not_found_after_parse(mock_get_available_prompts, mock
     # Simulate load_prompt raising FileNotFoundError for the selected prompt
     mock_load_prompt.side_effect = FileNotFoundError(f"Mocked FileNotFoundError for {SELECTED_PROMPT}.txt")
 
-    with mock.patch('sys.argv', ['script_name', '--prompt-keyword', SELECTED_PROMPT]):
+    with mock.patch('sys.argv', ['script_name', '--prompt', SELECTED_PROMPT]):
         with pytest.raises(SystemExit) as e:
             parse_arguments()
 

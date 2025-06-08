@@ -12,12 +12,12 @@ def parse_arguments():
         dest="model_name",
     )
     parser.add_argument(
-        "--prompt-keyword",
+        "--prompt",
         type=str,
         default="default",
         choices=get_available_prompts(),
         help="Keyword for the prompt to use. Corresponding <keyword>.txt file must exist in the prompts directory.",
-        dest="prompt_keyword",
+        dest="prompt",
     )
     parser.add_argument(
         "--num-examples",
@@ -53,10 +53,10 @@ def parse_arguments():
     args = parser.parse_args()
 
     try:
-        args.prompt_template = load_prompt(args.prompt_keyword)
+        args.prompt_template = load_prompt(args.prompt)
     except FileNotFoundError:
         parser.error(
-            f"Selected prompt file for keyword '{args.prompt_keyword}' not found. "
+            f"Selected prompt file for keyword '{args.prompt}' not found. "
             f"Available prompts: {', '.join(get_available_prompts())}"
         )
 
