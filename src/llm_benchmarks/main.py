@@ -1,7 +1,9 @@
 import argparse
+import logging
 import os
 # import re # No longer needed
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 from .data import GSM8KDataset  # Adjusted import
 from .solvers import GSM8KSolver  # Adjusted import
@@ -14,7 +16,34 @@ DEFAULT_PROMPT_TEMPLATE = """Question: {content}
 Please provide a step-by-step solution and end your response with the phrase 'The final answer is X' where X is the numerical answer."""
 
 
+class TqdmLoggingHandler(logging.Handler):
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.write(msg)
+            self.flush()
+        except Exception:
+            self.handleError(record)
+
+
 def main():
+    # Configure logging
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+
+    # Add the handler to the root logger
+    handler = TqdmLoggingHandler()
+    handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    
+    # Check if a handler is already present to avoid duplicates
+    if not root_logger.handlers:
+        root_logger.addHandler(handler)
+    
+    logger = logging.getLogger(__name__)
+
     parser = argparse.ArgumentParser(description="Run GSM8K benchmark.")
     parser.add_argument(
         "--model_name",
@@ -57,20 +86,20 @@ def main():
     args = parser.parse_args()
 
     if not os.getenv("OPENROUTER_API_KEY"):
-        print("Error: OPENROUTER_API_KEY environment variable not set.")
-        print("Please set it in your .env file or environment.")
+        logger.error("OPENROUTER_API_KEY environment variable not set.")
+        logger.error("Please set it in your .env file or environment.")
         return
 
-    print(
+    logger.info(
         f"Loading GSM8K dataset (split: {args.data_split}, config: {args.data_config})..."
     )
     try:
         dataset = GSM8KDataset(split=args.data_split, config=args.data_config)
     except Exception as e:
-        print(f"Failed to load dataset: {e}")
+        logger.error(f"Failed to load dataset: {e}")
         return
 
-    print(f"Initializing GSM8KSolver with model: {args.model_name}...")
+    logger.info(f"Initializing GSM8KSolver with model: {args.model_name}...")
     solver = GSM8KSolver( # MODIFIED - pass verbose
         model_name=args.model_name,
         prompt_template=args.prompt_template,
@@ -87,12 +116,12 @@ def main():
     )
 
     if num_to_run == 0:
-        print("No examples to run. The dataset might be empty or num_examples is 0.")
+        logger.info("No examples to run. The dataset might be empty or num_examples is 0.")
         return
 
-    print(f"Running benchmark on {num_to_run} examples...")
+    logger.info(f"Running benchmark on {num_to_run} examples...")
 
-    for i in range(num_to_run):
+    for i in tqdm(range(num_to_run), desc="Benchmarking Progress"):
         example = dataset[i]
         question = example["question"]
         true_answer_full = example["answer"]
@@ -134,14 +163,14 @@ def main():
             # total_examples was incremented before this check in the previous version,
             # which was incorrect. We should only count examples where ground truth is extractable.
             # So, we print the warning and skip.
-            print(
-                f"Warning: Could not extract ground truth answer for example {i+1} (Q: {result.question[:50]}...). Skipping."
+            logger.warning(
+                f"Could not extract ground truth answer for example {i+1} (Q: {result.question[:50]}...). Skipping."
             )
             # The solver handles its own verbose printing for the attempt.
             # This verbose block is for main.py's context of *skipping*.
             if args.verbose:
-                print(f"  Skipped Question: {result.question}")
-                print(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
+                logger.info(f"  Skipped Question: {result.question}")
+                logger.info(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
             continue
 
         # If we reach here, ground truth was extractable.
@@ -157,21 +186,14 @@ def main():
            result.extracted_model_answer == result.extracted_true_answer:
             correct_answers += 1
 
-        # Optional: Print progress periodically if not verbose
-        # This progress message refers to items from the dataset *attempted* up to num_to_run,
-        # not necessarily successfully processed examples (total_examples).
-        # So, (i+1) is appropriate here.
-        if not args.verbose and (i + 1) % 10 == 0:
-            print(f"Attempted {i + 1}/{num_to_run} examples...")
-
     if total_examples > 0:
         accuracy = (correct_answers / total_examples) * 100
-        print("\n--- Benchmark Summary ---")
-        print(f"Total examples processed: {total_examples}")
-        print(f"Correct answers: {correct_answers}")
-        print(f"Accuracy: {accuracy:.2f}%")
+        logger.info("\n--- Benchmark Summary ---")
+        logger.info(f"Total examples processed: {total_examples}")
+        logger.info(f"Correct answers: {correct_answers}")
+        logger.info(f"Accuracy: {accuracy:.2f}%")
     else:
-        print("\nNo examples were processed that had extractable ground truth answers.")
+        logger.info("\nNo examples were processed that had extractable ground truth answers.")
 
 
 if __name__ == "__main__":
