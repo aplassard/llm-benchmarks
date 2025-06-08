@@ -1,8 +1,5 @@
 import argparse
-
-DEFAULT_PROMPT_TEMPLATE = """Question: {content}
-
-Please provide a step-by-step solution and end your response with the phrase 'The final answer is X' where X is the numerical answer."""
+import os
 
 def parse_arguments():
     """Parses command-line arguments."""
@@ -15,10 +12,10 @@ def parse_arguments():
         dest="model_name",  # Keep dest as model_name
     )
     parser.add_argument(
-        "--prompt-template",  # Changed from prompt_template
+        "--prompt-keyword",
         type=str,
-        default=DEFAULT_PROMPT_TEMPLATE,
-        help="Prompt template to use. Must include '{content}'.",
+        default="default",
+        help="Keyword for the prompt file (e.g., 'default', 'rigorous'). The file should be in `src/llm_benchmarks/utils/prompts/` and named `<keyword>.txt`.",
         dest="prompt_template",  # Keep dest as prompt_template
     )
     parser.add_argument(
@@ -53,4 +50,21 @@ def parse_arguments():
         help="Set the logging level. Must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL.", # Update help
         dest="log_level",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Load prompt content from file based on keyword
+    keyword = args.prompt_template
+    # Construct the path relative to the script location or a known base directory.
+    # Assuming this script is run from a location where 'src/llm_benchmarks/utils/prompts/' is a valid relative path.
+    # For robustness, consider using absolute paths or paths relative to this file's location.
+    prompt_file_path = os.path.join("src", "llm_benchmarks", "utils", "prompts", f"{keyword}.txt")
+
+    try:
+        with open(prompt_file_path, "r", encoding="utf-8") as f:
+            args.prompt_template = f.read()
+    except FileNotFoundError:
+        parser.error(f"Prompt file not found: {prompt_file_path}. Please ensure a file named '{keyword}.txt' exists in the 'src/llm_benchmarks/utils/prompts/' directory.")
+        # Alternatively, raise an error or handle it as appropriate for your application
+        # raise FileNotFoundError(f"Prompt file not found: {prompt_file_path}")
+
+    return args
