@@ -1,5 +1,5 @@
 import argparse
-import os
+from .prompts import load_prompt, get_available_prompts
 
 def parse_arguments():
     """Parses command-line arguments."""
@@ -15,8 +15,9 @@ def parse_arguments():
         "--prompt-keyword",
         type=str,
         default="default",
-        help="Keyword for the prompt file (e.g., 'default', 'rigorous'). The file should be in `src/llm_benchmarks/utils/prompts/` and named `<keyword>.txt`.",
-        dest="prompt_template",  # Keep dest as prompt_template
+        choices=get_available_prompts(), # Dynamically set choices
+        help="Keyword for the prompt to use. Corresponding <keyword>.txt file must exist in the prompts directory.",
+        dest="prompt_keyword", # Store the keyword here
     )
     parser.add_argument(
         "--num-examples",  # Changed from num_examples
@@ -52,19 +53,21 @@ def parse_arguments():
     )
     args = parser.parse_args()
 
-    # Load prompt content from file based on keyword
-    keyword = args.prompt_template
-    # Construct the path relative to the script location or a known base directory.
-    # Assuming this script is run from a location where 'src/llm_benchmarks/utils/prompts/' is a valid relative path.
-    # For robustness, consider using absolute paths or paths relative to this file's location.
-    prompt_file_path = os.path.join("src", "llm_benchmarks", "utils", "prompts", f"{keyword}.txt")
-
+    # Load the prompt content using the keyword from args.prompt_keyword
+    # and store it in args.prompt_template
     try:
-        with open(prompt_file_path, "r", encoding="utf-8") as f:
-            args.prompt_template = f.read()
+        # args.prompt_keyword will exist due to dest="prompt_keyword"
+        # The actual prompt content will be stored in args.prompt_template
+        args.prompt_template = load_prompt(args.prompt_keyword)
     except FileNotFoundError:
-        parser.error(f"Prompt file not found: {prompt_file_path}. Please ensure a file named '{keyword}.txt' exists in the 'src/llm_benchmarks/utils/prompts/' directory.")
-        # Alternatively, raise an error or handle it as appropriate for your application
-        # raise FileNotFoundError(f"Prompt file not found: {prompt_file_path}")
+        # This path should ideally not be hit if 'choices' and 'default' work as expected,
+        # but it's a good safeguard.
+        parser.error(
+            f"Selected prompt file for keyword '{args.prompt_keyword}' not found. "
+            f"Available prompts: {', '.join(get_available_prompts())}"
+        )
+        # The line below is effectively dead code if parser.error exits, which it does.
+        # Keep for clarity if parser.error behavior changes or is mocked in a test.
+        # raise  # Re-raise the FileNotFoundError or handle appropriately
 
     return args
