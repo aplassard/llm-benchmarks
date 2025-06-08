@@ -1,5 +1,5 @@
 import argparse
-from .prompts import load_prompt, get_available_prompts
+from .prompt_utils import load_prompt, get_available_prompts
 
 def parse_arguments():
     """Parses command-line arguments."""

@@ -2,8 +2,8 @@ import pytest
 import os
 from unittest import mock
 
-# Functions to test from src.llm_benchmarks.utils.prompts
-from src.llm_benchmarks.utils.prompts import (
+# Functions to test from src.llm_benchmarks.utils.prompt_utils
+from src.llm_benchmarks.utils.prompt_utils import (
     get_prompt_path,
     load_prompt,
     get_available_prompts,
@@ -36,8 +36,8 @@ def test_get_prompt_path():
     expected_path = os.path.join(PROMPT_DIR, f"{keyword}.txt")
     assert get_prompt_path(keyword) == expected_path
 
-# Patch PROMPT_DIR in the prompts module to use our temp_prompt_files fixture
-@mock.patch('src.llm_benchmarks.utils.prompts.PROMPT_DIR', new_callable=mock.PropertyMock)
+# Patch PROMPT_DIR in the prompt_utils module to use our temp_prompt_files fixture
+@mock.patch('src.llm_benchmarks.utils.prompt_utils.PROMPT_DIR', new_callable=mock.PropertyMock)
 def test_load_prompt_success(mock_prompt_dir_prop, temp_prompt_files):
     """Tests successfully loading an existing prompt."""
     mock_prompt_dir_prop.return_value = str(temp_prompt_files) # PROMPT_DIR will now point to temp_prompt_files
@@ -48,7 +48,7 @@ def test_load_prompt_success(mock_prompt_dir_prop, temp_prompt_files):
     content_rigorous = load_prompt("rigorous")
     assert content_rigorous == MOCK_RIGOROUS_CONTENT
 
-@mock.patch('src.llm_benchmarks.utils.prompts.PROMPT_DIR', new_callable=mock.PropertyMock)
+@mock.patch('src.llm_benchmarks.utils.prompt_utils.PROMPT_DIR', new_callable=mock.PropertyMock)
 def test_load_prompt_file_not_found(mock_prompt_dir_prop, temp_prompt_files):
     """Tests that FileNotFoundError is raised for a non-existent prompt keyword."""
     mock_prompt_dir_prop.return_value = str(temp_prompt_files)
@@ -58,7 +58,7 @@ def test_load_prompt_file_not_found(mock_prompt_dir_prop, temp_prompt_files):
     assert "Prompt file not found" in str(excinfo.value)
     assert "non_existent_prompt.txt" in str(excinfo.value)
 
-@mock.patch('src.llm_benchmarks.utils.prompts.PROMPT_DIR', new_callable=mock.PropertyMock)
+@mock.patch('src.llm_benchmarks.utils.prompt_utils.PROMPT_DIR', new_callable=mock.PropertyMock)
 def test_get_available_prompts(mock_prompt_dir_prop, temp_prompt_files):
     """Tests listing available prompt keywords."""
     mock_prompt_dir_prop.return_value = str(temp_prompt_files)
@@ -66,7 +66,7 @@ def test_get_available_prompts(mock_prompt_dir_prop, temp_prompt_files):
     available = get_available_prompts()
     assert sorted(available) == sorted(["another", "default", "rigorous"])
 
-@mock.patch('src.llm_benchmarks.utils.prompts.PROMPT_DIR', new_callable=mock.PropertyMock)
+@mock.patch('src.llm_benchmarks.utils.prompt_utils.PROMPT_DIR', new_callable=mock.PropertyMock)
 def test_get_available_prompts_empty(mock_prompt_dir_prop, tmp_path):
     """Tests listing available prompts when the directory is empty or contains no .txt files."""
     empty_prompts_dir = tmp_path / "empty_prompts"
@@ -77,7 +77,7 @@ def test_get_available_prompts_empty(mock_prompt_dir_prop, tmp_path):
     available = get_available_prompts()
     assert available == []
 
-@mock.patch('src.llm_benchmarks.utils.prompts.PROMPT_DIR', new_callable=mock.PropertyMock)
+@mock.patch('src.llm_benchmarks.utils.prompt_utils.PROMPT_DIR', new_callable=mock.PropertyMock)
 def test_get_available_prompts_no_directory(mock_prompt_dir_prop, tmp_path):
     """Tests listing available prompts when the prompt directory does not exist."""
     non_existent_dir = tmp_path / "non_existent_prompts_dir"
