@@ -35,10 +35,10 @@ def extract_gsm8k_answer(answer_str: str) -> str | None: # Moved from main.py (N
     return None
 
 class GSM8KSolver:
-    def __init__(self, model_name: str, prompt_template: str, verbose: bool = False): # MODIFIED
+    def __init__(self, model_name: str, prompt_template: str): # verbose parameter removed
         self.model = OpenRouterPrompt(prompt=prompt_template, model=model_name)
         self.prompt_template = prompt_template
-        self.verbose = verbose # NEW
+        # self.verbose = verbose removed
 
     def solve(self, question: str, true_answer_full: str) -> GSM8KResult:
         # Prompt the model
@@ -59,21 +59,20 @@ class GSM8KSolver:
         # This will use the actual moved/imported function in later steps
         extracted_true_answer = extract_gsm8k_answer(true_answer_full) # Using moved function
 
-        # NEW: Verbose printing logic
-        if self.verbose:
-            logger.info(f"Question: {question}")
-            logger.info(f"Ground Truth Answer (Full): {true_answer_full}")
-            logger.info(f"Ground Truth Answer (Extracted): {extracted_true_answer}")
-            logger.info(f"Model's Full Response: {model_response}")
-            logger.info(f"Model's Predicted Answer (Extracted): {extracted_model_answer}")
+        # Verbose printing logic changed to logger.debug and condition removed
+        logger.debug(f"Question: {question}")
+        logger.debug(f"Ground Truth Answer (Full): {true_answer_full}")
+        logger.debug(f"Ground Truth Answer (Extracted): {extracted_true_answer}")
+        logger.debug(f"Model's Full Response: {model_response}")
+        logger.debug(f"Model's Predicted Answer (Extracted): {extracted_model_answer}")
 
-            # A prediction is correct if both extracted answers are not None and they match.
-            is_correct = (
-                extracted_model_answer is not None
-                and extracted_true_answer is not None
-                and extracted_model_answer == extracted_true_answer
-            )
-            logger.info(f"Result: {'CORRECT' if is_correct else 'INCORRECT'}")
+        # A prediction is correct if both extracted answers are not None and they match.
+        is_correct = (
+            extracted_model_answer is not None
+            and extracted_true_answer is not None
+            and extracted_model_answer == extracted_true_answer
+        )
+        logger.debug(f"Result: {'CORRECT' if is_correct else 'INCORRECT'}")
 
         return GSM8KResult(
             question=question,
