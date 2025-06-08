@@ -1,6 +1,15 @@
 import logging
 from tqdm import tqdm
 
+class AppNameFilter(logging.Filter):
+    def __init__(self, app_name=''):
+        super().__init__()
+        self.app_name = app_name
+
+    def filter(self, record):
+        # Allow any records that start with your app's name
+        return record.name.startswith(self.app_name)
+
 class TqdmLoggingHandler(logging.Handler):
     def __init__(self, level=logging.NOTSET):
         super().__init__(level)
@@ -30,6 +39,8 @@ def setup_logging(log_level_str: str = "INFO"):
     # Create and configure the TqdmLoggingHandler
     handler = TqdmLoggingHandler()
     handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+
+    handler.addFilter(AppNameFilter("llm_benchmarks"))
 
     # Clear existing handlers and add the new one
     if root_logger.hasHandlers():
