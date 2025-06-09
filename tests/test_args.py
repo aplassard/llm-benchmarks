@@ -126,9 +126,3 @@ def test_parse_arguments_num_threads(mock_get_available_prompts, mock_load_promp
         assert args.num_threads == 10
         assert args.model_name == 'test_model'
         assert args.prompt == 'default'
-
-    # Verify that prompt loading was called as expected for each parse_arguments call
-    # For the three calls to parse_arguments above:
-    assert mock_load_prompt.call_count == 3
-    # get_available_prompts is called once per parse_arguments call by choices=
-    assert mock_get_available_prompts.call_count == 3

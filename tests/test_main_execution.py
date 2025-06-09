@@ -4,11 +4,13 @@ import threading
 import time
 import logging # For logger instance
 import uuid # For mocking run_id
+from unittest.mock import MagicMock
+
 
 # Modules to be tested or mocked
 from src.llm_benchmarks.main import run_benchmarks
 from src.llm_benchmarks.data import GSM8KDataset
-from src.llm_benchmarks.solvers import GSM8KSolver, SolveResult # Assuming SolveResult is needed for mock
+from src.llm_benchmarks.solvers import GSM8KSolver, GSM8KResult
 from src.llm_benchmarks.utils.args import parse_arguments # To mock its return value
 from src.llm_benchmarks.utils.logging import setup_logging # To mock it
 from src.llm_benchmarks.cache.cache import CacheManager # May use real or mock
