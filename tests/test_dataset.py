@@ -197,15 +197,25 @@ class TestGSM8KDatasetIntegration:
         assert initial_items != shuffled_items, \
             f"Shuffled items {shuffled_items} were the same as initial items {initial_items}. Shuffling might not have occurred."
 
-        # 5. Instantiate again with shuffle=False to ensure non-persistence
-        dataset_no_shuffle_again = GSM8KDataset(split=split, config=config, shuffle=False)
-        assert len(dataset_no_shuffle_again) >= num_items_to_check, "Dataset (no shuffle again) too small"
+        # 5. Test that shuffling again produces a NEW different order
+        dataset_shuffled_again = GSM8KDataset(split=split, config=config, shuffle=True)
+        assert len(dataset_shuffled_again) >= num_items_to_check, "Second shuffled dataset too small"
+        shuffled_items_again = [dataset_shuffled_again[i]["question"] for i in range(num_items_to_check)]
 
-        initial_items_again = [dataset_no_shuffle_again[i]["question"] for i in range(num_items_to_check)]
+        # Assert that two separate shuffles produce different results.
+        # There's a very small theoretical chance of collision for small N, but highly unlikely here.
+        assert shuffled_items != shuffled_items_again, \
+            f"Two separate shuffles produced the same question order: {shuffled_items}."
 
-        # 6. Assert that the items match the original predefined list
-        # This ensures that the shuffle=True in the previous step didn't somehow
+        # 6. Instantiate again with shuffle=False to ensure non-persistence of shuffle state
+        dataset_unshuffled_after_shuffle = GSM8KDataset(split=split, config=config, shuffle=False)
+        assert len(dataset_unshuffled_after_shuffle) >= num_items_to_check, "Dataset (unshuffled after shuffle) too small"
+
+        unshuffled_questions_after_shuffle = [dataset_unshuffled_after_shuffle[i]["question"] for i in range(num_items_to_check)]
+
+        # Assert that the items match the original predefined list (expected_initial_questions)
+        # This ensures that shuffle=True in the previous steps didn't somehow
         # permanently alter the underlying data source for subsequent non-shuffled loads.
-        assert initial_items_again == initial_items, \
-            f"Items after re-instantiating with shuffle=False {initial_items_again} " \
-            f"did not match original initial items {initial_items}."
+        assert unshuffled_questions_after_shuffle == expected_initial_questions, \
+            f"Items after re-instantiating with shuffle=False {unshuffled_questions_after_shuffle} " \
+            f"did not match original expected questions {expected_initial_questions}."
