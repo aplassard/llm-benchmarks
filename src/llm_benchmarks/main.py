@@ -6,7 +6,7 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .data import GSM8KDataset
-from .solvers import GSM8KSolver, SolveResult
+from .solvers import GSM8KSolver, GSM8KResult
 from .utils.args import parse_arguments
 from .utils.logging import setup_logging
 from llm_benchmarks.cache.cache import CacheManager # For caching
@@ -15,7 +15,7 @@ from llm_benchmarks.cache.cache import CacheManager # For caching
 load_dotenv()
 
 
-def process_example(example_data: dict, solver: GSM8KSolver, logger: logging.Logger, example_index: int) -> tuple[bool, bool, SolveResult | None]:
+def process_example(example_data: dict, solver: GSM8KSolver, logger: logging.Logger, example_index: int) -> tuple[bool, bool, GSM8KResult | None]:
     """
     Processes a single example using the solver.
     Returns a tuple: (is_correct, was_skipped, solve_result_or_none).

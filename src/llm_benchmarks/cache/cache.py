@@ -21,7 +21,7 @@ class CacheManager:
         # If it were called from other methods, it would need locking around self._conn assignment.
         try:
             # sqlite3.connect is thread-safe for creating connections.
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             self._conn = conn # Assign to self._conn once successfully connected
             # self._conn.row_factory = sqlite3.Row # Allows accessing columns by name - moved above
@@ -49,25 +49,25 @@ class CacheManager:
                     CREATE TABLE IF NOT EXISTS results (
                         eval_id TEXT PRIMARY KEY,
                     model_name TEXT NOT NULL,
-                    gsm8k_question TEXT NOT NULL, # Changed from gsm8k_content to gsm8k_question
+                    gsm8k_question TEXT NOT NULL, 
                     prompt_template_name TEXT NOT NULL,
-                    gsm8k_split TEXT NOT NULL,     # Added
-                    gsm8k_config TEXT NOT NULL,    # Added
-                    dataset_full_expected_response TEXT NOT NULL, # Renamed from true_answer_full
-                    dataset_extracted_answer TEXT, # Renamed from true_answer_extracted
-                    model_full_response_json TEXT, # Renamed from model_response_full_json
-                    model_extracted_answer TEXT,   # Renamed from model_response_extracted_answer
-                    run_id TEXT NOT NULL,          # Added
+                    gsm8k_split TEXT NOT NULL,
+                    gsm8k_config TEXT NOT NULL,
+                    dataset_full_expected_response TEXT NOT NULL,
+                    dataset_extracted_answer TEXT,
+                    model_full_response_json TEXT,
+                    model_extracted_answer TEXT,
+                    run_id TEXT NOT NULL,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
                 """)
                 logger.info(f"Database initialized and 'results' table ensured at {self.db_path}")
-        except sqlite3.Error as e:
-            logger.error(f"Error initializing database table: {e}")
-            # self._conn = None # No need to set self._conn to None here, lock is already held
-            self.use_cache = False # Disable cache if table creation fails
-            logger.warning(f"Caching disabled due to database initialization error. Connection will be closed if open.")
-            # If _conn exists, it will be closed by __exit__ or explicit close()
+            except sqlite3.Error as e:
+                logger.error(f"Error initializing database table: {e}")
+                # self._conn = None # No need to set self._conn to None here, lock is already held
+                self.use_cache = False # Disable cache if table creation fails
+                logger.warning(f"Caching disabled due to database initialization error. Connection will be closed if open.")
+                # If _conn exists, it will be closed by __exit__ or explicit close()
 
     def generate_eval_id(self, model_name: str, gsm8k_question_content: str, prompt_template_name: str, gsm8k_split: str, gsm8k_config: str) -> str:
         # Create a stable string representation of the inputs
