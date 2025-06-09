@@ -69,10 +69,10 @@ class CacheManager:
                 cursor = self._conn.execute("SELECT * FROM results WHERE eval_id = ?", (eval_id,))
                 row = cursor.fetchone()
                 if row:
-                    logger.info(f"Cache hit for eval_id: {eval_id}")
+                    logger.debug(f"Cache hit for eval_id: {eval_id}")
                     return dict(row)
                 else:
-                    logger.info(f"Cache miss for eval_id: {eval_id}")
+                    logger.debug(f"Cache miss for eval_id: {eval_id}")
                     return None
         except sqlite3.Error as e:
             logger.error(f"Error fetching from cache for eval_id {eval_id}: {e}")

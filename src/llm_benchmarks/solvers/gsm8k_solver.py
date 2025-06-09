@@ -113,7 +113,7 @@ class GSM8KSolver:
 
             cached_data = self.cache_manager.get_cached_result(eval_id)
             if cached_data:
-                logger.info(f"Cache hit for eval_id {eval_id}. Using cached result.")
+                logger.debug(f"Cache hit for eval_id {eval_id}. Using cached result.")
                 raw_cached_response_str = cached_data["model_full_response_json"]
                 model_response_text = self._parse_cached_model_response(raw_cached_response_str)
                 extracted_model_answer = cached_data["model_extracted_answer"]
@@ -128,9 +128,9 @@ class GSM8KSolver:
 
         # If self.cache_manager is None, or if any component for eval_id was None, or if it was a cache miss:
         if eval_id: # Log cache miss only if eval_id was generated (i.e., caching was attempted)
-             logger.info(f"Cache miss for eval_id {eval_id}. Executing model prompt for model {self.model_name}.")
+             logger.debug(f"Cache miss for eval_id {eval_id}. Executing model prompt for model {self.model_name}.")
         else:
-             logger.info(f"Caching not attempted or not configured. Executing model prompt for model {self.model_name}.")
+             logger.debug(f"Caching not attempted or not configured. Executing model prompt for model {self.model_name}.")
 
         model_response_obj: ChatCompletion | None = self.model.execute_prompt(content=question)
 

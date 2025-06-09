@@ -74,18 +74,10 @@ def main():
 
     run_id = str(uuid.uuid4())
     logger.info(f"Current Run ID: {run_id}")
-
-    prompt_template_name = os.path.basename(args.prompt_template)
-    logger.info(f"Using prompt template file: {args.prompt_template} (Name for cache: {prompt_template_name})")
-    try:
-        with open(args.prompt_template, "r", encoding="utf-8") as f:
-            prompt_template_content = f.read()
-    except FileNotFoundError:
-        logger.error(f"Prompt template file not found: {args.prompt_template}")
-        return
-    except Exception as e:
-        logger.error(f"Error reading prompt template file {args.prompt_template}: {e}")
-        return
+    
+    prompt_template_content = args.prompt_template
+    prompt_template_name = args.prompt
+    logger.info(f"Using prompt template file: {prompt_template_name} (Name for cache: {prompt_template_name})")
 
     if "{content}" not in prompt_template_content:
         logger.error(f"Prompt template {args.prompt_template} must contain a '{{content}}' placeholder.")
