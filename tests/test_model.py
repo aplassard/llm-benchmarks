@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 
 # Import the specific exceptions from the openai library to simulate errors
-from openai import AuthenticationError
+from openai import AuthenticationError, APIConnectionError
 
 # Import the class to be tested
 # IMPORTANT: Adjust this import path to match your project structure
@@ -120,15 +120,18 @@ def test_execute_prompt_handles_api_error(mock_openai_client):
     mock_response = httpx.Response(status_code=401, request=mock_request)
 
     # 2. Configure the mock to raise the properly instantiated error
-    mock_openai_client.chat.completions.create.side_effect = AuthenticationError(
+    auth_error = AuthenticationError(
         message="Incorrect API key provided.", response=mock_response, body=None
     )
+    mock_openai_client.chat.completions.create.side_effect = auth_error
 
     # 3. Call your function and assert the outcome
     prompt_instance = OpenRouterPrompt(prompt="Prompt: {content}")
-    result = prompt_instance.execute_prompt("some content")
 
-    assert result is None
+    # Expect AuthenticationError directly because it should not be retried
+    with pytest.raises(AuthenticationError) as excinfo:
+        prompt_instance.execute_prompt("some content")
+    assert excinfo.value == auth_error
 
 
 def test_call_method_works(mocker):
@@ -239,3 +242,54 @@ def test_openrouter_prompt_with_default_model(MockOpenAI): # Test now uses mock
     # call_args is a tuple (args, kwargs). We need kwargs for the 'model' parameter.
     called_kwargs = mock_openai_client_instance.chat.completions.create.call_args.kwargs
     assert called_kwargs['model'] == default_model_name
+
+
+# --- Test Group 3: Retry Logic ---
+
+def test_execute_prompt_with_retry(mocker):
+    """
+    Tests that the execute_prompt method correctly retries on APIConnectionError
+    and eventually succeeds.
+    """
+    # 1. Mock os.getenv to provide a dummy API key for OpenRouterPrompt initialization
+    mocker.patch("llm_benchmarks.model.model.os.getenv", return_value="fake-api-key")
+
+    # 2. Prepare mock for OpenAI client instance and its create method
+    mock_openai_client_instance = MagicMock(name="MockOpenAIClientInstance")
+    mock_create_method = MagicMock(name="MockCreateMethod")
+    mock_openai_client_instance.chat.completions.create = mock_create_method
+
+    # Simulate API errors for the first 2 calls, then a success
+    mock_successful_response = _create_mock_chat_completion_obj("Success after retries")
+    mock_create_method.side_effect = [
+        APIConnectionError(request=httpx.Request(method="POST", url="http://dummy")),
+        APIConnectionError(request=httpx.Request(method="POST", url="http://dummy")),
+        mock_successful_response
+    ]
+
+    # 3. Patch the OpenAI class *within the module being tested* to return our instance mock
+    # This ensures that when OpenRouterPrompt instantiates OpenAI, it gets our pre-configured mock
+    mocker.patch("llm_benchmarks.model.model.OpenAI", return_value=mock_openai_client_instance)
+
+    # 4. Now, setup OpenRouterPrompt instance. Its self.client will be mock_openai_client_instance
+    prompt_instance = OpenRouterPrompt(prompt="Test prompt: {content}", model="test-model")
+
+    # 5. Call the method
+    content_to_pass = "some test content"
+    result = prompt_instance.execute_prompt(content_to_pass)
+
+    # 6. Assertions
+    # Check that the create method was called 3 times
+    assert mock_create_method.call_count == 3
+
+    # Check that the result is the successful response
+    assert result is not None
+    assert result.choices[0].message.content == "Success after retries"
+
+    # Verify the call arguments for the last successful call (optional, but good practice)
+    expected_full_prompt = "Test prompt: some test content"
+    mock_create_method.assert_called_with(
+        model="test-model",
+        messages=[{"role": "user", "content": expected_full_prompt}],
+        temperature=0,
+    )
