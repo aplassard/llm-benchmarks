@@ -15,12 +15,14 @@ dependencies = [
     "pytest>=8.4.0",
     "pytest-mock>=3.14.1",
     "ruff>=0.11.13",
+    "streamlit", # Added streamlit
     "tqdm",
     "tenacity>=8.2.3,<9.0.0",
 ]
 
 [project.scripts]
-gsm8k-benchmark = "llm_benchmarks.main:main"
+gsm8k-benchmark-runner = "llm_benchmarks.benchmark_runner:main" # Renamed and updated path
+gsm8k-leaderboard = "llm_benchmarks.gsm8k_leaderboard:main" # Added new script
 
 [build-system]
 requires = ["setuptools>=61.0"]
