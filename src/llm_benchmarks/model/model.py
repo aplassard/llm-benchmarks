@@ -1,8 +1,9 @@
 import os
-from openai import OpenAI
+from openai import OpenAI, APIConnectionError
 from openai.types.chat.chat_completion import ChatCompletion
 from dotenv import load_dotenv
 import logging
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 load_dotenv()
 
@@ -24,6 +25,11 @@ class OpenRouterPrompt:
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
 
+    @retry(
+        retry=lambda retry_state: isinstance(retry_state.outcome.exception(), APIConnectionError),
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=4, max=60)
+    )
     def execute_prompt(self, content: str) -> ChatCompletion | None:
         """
         Executes the prompt with the given content.
@@ -38,8 +44,8 @@ class OpenRouterPrompt:
             )
             return response
         except Exception as e:
-            logger.error(f"An error occurred with model {self.model} during API call: {e}")
-            return None
+            logger.error(f"An error occurred with model {self.model} during API call after multiple retries: {e}")
+            raise  # Re-raise the exception after logging
 
     def __call__(self, content: str) -> ChatCompletion | None:
         return self.execute_prompt(content)
