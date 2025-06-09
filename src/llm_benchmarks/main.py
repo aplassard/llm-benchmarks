@@ -86,7 +86,7 @@ def main():
     logger.info(f"Using model: {args.model_name}")
     logger.info(f"Loading GSM8K dataset (split: {args.data_split}, config: {args.data_config})...")
     try:
-        dataset = GSM8KDataset(split=args.data_split, config=args.data_config)
+        dataset = GSM8KDataset(split=args.data_split, config=args.data_config, shuffle=args.shuffle)
     except Exception as e:
         logger.error(f"Failed to load dataset: {e}")
         return

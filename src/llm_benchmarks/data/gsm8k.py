@@ -18,6 +18,7 @@ class GSM8KDataset:
         self,
         split: Literal["train", "test"] = "train",
         config: Literal["main", "socratic"] = "main",
+        shuffle: bool = False,
     ):
         if split not in ["train", "test"]:
             raise ValueError(
@@ -31,6 +32,8 @@ class GSM8KDataset:
 
         try:
             self.dataset = load_dataset("gsm8k", name=config, split=split)
+            if shuffle:
+                self.dataset = self.dataset.shuffle(seed=42)
         except Exception as e:
             print("Failed to load dataset from Hugging Face.")
             print(
