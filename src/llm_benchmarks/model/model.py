@@ -1,9 +1,12 @@
 import os
 from openai import OpenAI
+from openai.types.chat.chat_completion import ChatCompletion
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
 
 class OpenRouterPrompt:
     """
@@ -21,9 +24,10 @@ class OpenRouterPrompt:
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
 
-    def execute_prompt(self, content: str) -> str:
+    def execute_prompt(self, content: str) -> ChatCompletion | None:
         """
         Executes the prompt with the given content.
+        Returns the full ChatCompletion object or None if an error occurs.
         """
         try:
             full_prompt = self.prompt.format(content=content)
@@ -32,10 +36,10 @@ class OpenRouterPrompt:
                 messages=[{"role": "user", "content": full_prompt}],
                 temperature=0,
             )
-            return response.choices[0].message.content
+            return response
         except Exception as e:
-            print(f"An error occurred with model {self.model}: {e}")
-            return f"Error: Could not get a response. Details: {e}"
+            logger.error(f"An error occurred with model {self.model} during API call: {e}")
+            return None
 
-    def __call__(self, content: str) -> str:
+    def __call__(self, content: str) -> ChatCompletion | None:
         return self.execute_prompt(content)

@@ -50,6 +50,15 @@ def parse_arguments():
         help="Set the logging level. Must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL.",
         dest="log_level",
     )
+    # New argument
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        # Default is False when action='store_true' and flag is not present.
+        # Explicitly setting default=False is not strictly needed but is clear.
+        help="Disable caching of results.",
+        dest="no_cache", # Ensure 'dest' is specified if you want to access it as args.no_cache
+    )
     args = parser.parse_args()
 
     try:

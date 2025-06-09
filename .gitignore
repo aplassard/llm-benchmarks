@@ -196,3 +196,6 @@ cython_debug/
 # environment variables
 .env
 .env.local
+
+# sqlite
+*.sqlite3
