@@ -50,6 +50,13 @@ def parse_arguments():
         help="Set the logging level. Must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL.",
         dest="log_level",
     )
+    parser.add_argument(
+        "--num-threads",
+        type=int,
+        default=1,
+        help="Number of threads used for concurrent processing.",
+        dest="num_threads",
+    )
     # New argument
     parser.add_argument(
         "--no-cache",

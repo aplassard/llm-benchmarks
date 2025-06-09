@@ -86,3 +86,49 @@ def test_load_prompt_file_not_found_after_parse(mock_get_available_prompts, mock
         # get_available_prompts is called once for choices, and again inside the error handler if load_prompt fails.
         assert mock_get_available_prompts.call_count == 2
         mock_load_prompt.assert_called_once_with(SELECTED_PROMPT)
+
+
+@mock.patch('src.llm_benchmarks.utils.args.load_prompt')
+@mock.patch('src.llm_benchmarks.utils.args.get_available_prompts')
+def test_parse_arguments_num_threads(mock_get_available_prompts, mock_load_prompt):
+    """Tests parsing of the --num-threads argument."""
+    # Mock basic prompt loading functionality to satisfy parser
+    mock_get_available_prompts.return_value = ['default']
+    mock_load_prompt.return_value = "prompt_content_for_default"
+
+    # Test case 1: --num-threads is provided
+    with mock.patch('sys.argv', ['script_name', '--num-threads', '4', '--prompt', 'default']):
+        args = parse_arguments()
+        assert args.num_threads == 4
+        assert args.prompt == 'default' # Ensure other args are fine
+
+    # Reset mocks for the next case if necessary (though parse_arguments re-evaluates them)
+    mock_load_prompt.reset_mock()
+    mock_get_available_prompts.reset_mock() # Reset for call count checks if any new ones are added
+    mock_get_available_prompts.return_value = ['default'] # Re-assign return value
+    mock_load_prompt.return_value = "prompt_content_for_default"
+
+
+    # Test case 2: --num-threads is not provided (should default to 1)
+    with mock.patch('sys.argv', ['script_name', '--prompt', 'default']):
+        args = parse_arguments()
+        assert args.num_threads == 1
+        assert args.prompt == 'default'
+
+    # Test case 3: --num-threads with a different value
+    mock_load_prompt.reset_mock()
+    mock_get_available_prompts.reset_mock()
+    mock_get_available_prompts.return_value = ['default']
+    mock_load_prompt.return_value = "prompt_content_for_default"
+
+    with mock.patch('sys.argv', ['script_name', '--num-threads', '10', '--model-name', 'test_model', '--prompt', 'default']):
+        args = parse_arguments()
+        assert args.num_threads == 10
+        assert args.model_name == 'test_model'
+        assert args.prompt == 'default'
+
+    # Verify that prompt loading was called as expected for each parse_arguments call
+    # For the three calls to parse_arguments above:
+    assert mock_load_prompt.call_count == 3
+    # get_available_prompts is called once per parse_arguments call by choices=
+    assert mock_get_available_prompts.call_count == 3

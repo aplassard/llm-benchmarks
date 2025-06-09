@@ -239,3 +239,163 @@ def test_openrouter_prompt_with_default_model(MockOpenAI): # Test now uses mock
     # call_args is a tuple (args, kwargs). We need kwargs for the 'model' parameter.
     called_kwargs = mock_openai_client_instance.chat.completions.create.call_args.kwargs
     assert called_kwargs['model'] == default_model_name
+
+
+# --- Test Group 3: Retries and Error Handling (`execute_prompt` with backoff) ---
+from openai import APIStatusError, APITimeoutError, APIConnectionError, RateLimitError
+import time # For time.sleep
+import random # For random.uniform
+
+# Need to import logger from the module to mock it, if it's used there.
+# from llm_benchmarks.model import model as model_module_logger # if logger is model_module.logger
+# Assuming logger is obtained by `logging.getLogger(__name__)` in model.py,
+# patching 'llm_benchmarks.model.model.logger' is correct.
+
+class TestOpenRouterPromptWithRetries:
+    PROMPT_TEMPLATE = "Test prompt: {content}"
+    MODEL_NAME = "test-model/retry-model"
+    DEFAULT_CONTENT = "some content"
+
+    @pytest.fixture(autouse=True)
+    def setup_mocks(self, mocker):
+        # Mock os.getenv for API key
+        mocker.patch("llm_benchmarks.model.model.os.getenv", return_value="fake-api-key-for-retry-tests")
+
+        # Mock OpenAI client parts
+        self.mock_openai_client_instance = MagicMock()
+        self.mock_chat_completions_create = self.mock_openai_client_instance.chat.completions.create
+        mocker.patch("llm_benchmarks.model.model.OpenAI", return_value=self.mock_openai_client_instance)
+
+        # Mock time.sleep
+        self.mock_sleep = mocker.patch("llm_benchmarks.model.model.time.sleep")
+
+        # Mock random.uniform for predictable jitter (return 0 for no jitter in tests)
+        self.mock_random_uniform = mocker.patch("llm_benchmarks.model.model.random.uniform", return_value=0.0)
+
+        # Mock the logger used in model.py
+        self.mock_logger = mocker.patch("llm_benchmarks.model.model.logger")
+
+        # Instantiate the class under test
+        self.prompt_instance = OpenRouterPrompt(prompt=self.PROMPT_TEMPLATE, model=self.MODEL_NAME)
+
+        # Ensure retry parameters are at known values for tests
+        self.prompt_instance.MAX_RETRIES = 3 # Override for faster tests
+        self.prompt_instance.INITIAL_DELAY = 0.1 # s, for faster tests
+        self.prompt_instance.BACKOFF_FACTOR = 2.0
+        self.prompt_instance.JITTER_FACTOR = 0.1 # Though random.uniform is mocked to 0
+
+    def _get_mock_response(self, text_content="successful response"):
+        return _create_mock_chat_completion_obj(text_content)
+
+    def test_execute_prompt_success_first_try(self):
+        expected_response = self._get_mock_response()
+        self.mock_chat_completions_create.return_value = expected_response
+
+        result = self.prompt_instance.execute_prompt(self.DEFAULT_CONTENT)
+
+        assert result == expected_response
+        self.mock_chat_completions_create.assert_called_once()
+        self.mock_sleep.assert_not_called()
+        self.mock_logger.warning.assert_not_called()
+        self.mock_logger.error.assert_not_called()
+
+    def test_execute_prompt_retry_once_then_succeed_ratelimit(self):
+        expected_response = self._get_mock_response()
+        mock_request = httpx.Request(method="POST", url="https://api.test.com") # Needed for RateLimitError
+        mock_http_response = httpx.Response(status_code=429, request=mock_request) # Needed for RateLimitError
+
+        self.mock_chat_completions_create.side_effect = [
+            RateLimitError(message="Too many requests", response=mock_http_response, body=None),
+            expected_response
+        ]
+
+        result = self.prompt_instance.execute_prompt(self.DEFAULT_CONTENT)
+
+        assert result == expected_response
+        assert self.mock_chat_completions_create.call_count == 2
+        self.mock_sleep.assert_called_once_with(self.prompt_instance.INITIAL_DELAY) # Jitter is mocked to 0
+        self.mock_logger.warning.assert_called_once()
+        assert "Retryable API error" in self.mock_logger.warning.call_args[0][0]
+        assert "RateLimitError" in self.mock_logger.warning.call_args[0][0]
+
+    def test_execute_prompt_retry_max_attempts_then_fail_apitimeout(self):
+        mock_request = httpx.Request(method="POST", url="https://api.test.com")
+        errors = [APITimeoutError(message="Timeout", request=mock_request) for _ in range(self.prompt_instance.MAX_RETRIES)]
+        self.mock_chat_completions_create.side_effect = errors
+
+        result = self.prompt_instance.execute_prompt(self.DEFAULT_CONTENT)
+
+        assert result is None
+        assert self.mock_chat_completions_create.call_count == self.prompt_instance.MAX_RETRIES
+        assert self.mock_sleep.call_count == self.prompt_instance.MAX_RETRIES - 1
+
+        # Check exponential backoff (simplified check, assumes no jitter due to mocking)
+        expected_delays = [self.prompt_instance.INITIAL_DELAY * (self.prompt_instance.BACKOFF_FACTOR ** i) for i in range(self.prompt_instance.MAX_RETRIES - 1)]
+        for i, call_args in enumerate(self.mock_sleep.call_args_list):
+            assert call_args[0][0] == expected_delays[i]
+
+        self.mock_logger.error.assert_called()
+        # The last log before final error is a warning for the retry attempt, then a final error
+        assert f"API call failed for model {self.MODEL_NAME} after {self.prompt_instance.MAX_RETRIES} retries." in self.mock_logger.error.call_args_list[-1][0][0]
+
+
+    def test_execute_prompt_non_retryable_api_status_error_400(self):
+        mock_request = httpx.Request(method="POST", url="https.api.test.com")
+        mock_response = httpx.Response(status_code=400, request=mock_request, json={"error": "bad request"})
+        self.mock_chat_completions_create.side_effect = APIStatusError(message="Bad request", response=mock_response, body=None)
+
+        result = self.prompt_instance.execute_prompt(self.DEFAULT_CONTENT)
+
+        assert result is None
+        self.mock_chat_completions_create.assert_called_once()
+        self.mock_sleep.assert_not_called()
+        self.mock_logger.error.assert_called_once()
+        assert "Non-retryable APIStatusError" in self.mock_logger.error.call_args[0][0]
+        assert "Status 400" in self.mock_logger.error.call_args[0][0]
+
+    def test_execute_prompt_retryable_api_status_error_500_then_succeed(self):
+        expected_response = self._get_mock_response()
+        mock_request = httpx.Request(method="POST", url="https.api.test.com")
+        mock_response_500 = httpx.Response(status_code=500, request=mock_request, json={"error": "server error"})
+
+        self.mock_chat_completions_create.side_effect = [
+            APIStatusError(message="Server error", response=mock_response_500, body=None),
+            expected_response
+        ]
+
+        result = self.prompt_instance.execute_prompt(self.DEFAULT_CONTENT)
+
+        assert result == expected_response
+        assert self.mock_chat_completions_create.call_count == 2
+        self.mock_sleep.assert_called_once_with(self.prompt_instance.INITIAL_DELAY) # Jitter mocked to 0
+        self.mock_logger.warning.assert_called_once()
+        assert "Retryable API StatusError" in self.mock_logger.warning.call_args[0][0]
+        assert "Status 500" in self.mock_logger.warning.call_args[0][0]
+
+    def test_execute_prompt_unexpected_exception_then_fail(self):
+        # Test that a generic Exception is caught and retried (as per current implementation)
+        # and eventually fails after max retries.
+        errors = [Exception("Some very unexpected error") for _ in range(self.prompt_instance.MAX_RETRIES)]
+        self.mock_chat_completions_create.side_effect = errors
+
+        result = self.prompt_instance.execute_prompt(self.DEFAULT_CONTENT)
+        assert result is None
+        assert self.mock_chat_completions_create.call_count == self.prompt_instance.MAX_RETRIES
+        assert self.mock_sleep.call_count == self.prompt_instance.MAX_RETRIES -1
+
+        # Check that the first attempt logs the unexpected error
+        first_log_call_args = self.mock_logger.error.call_args_list[0][0][0]
+        assert f"An unexpected error occurred with model {self.MODEL_NAME}" in first_log_call_args
+        assert "Exception - Some very unexpected error" in first_log_call_args
+
+        # Check that the final error log indicates failure after retries
+        final_log_call_args = self.mock_logger.error.call_args_list[-1][0][0]
+        assert f"API call failed for model {self.MODEL_NAME} after {self.prompt_instance.MAX_RETRIES} retries" in final_log_call_args
+
+        # Also check that a warning about retrying an unexpected error is logged for each retry attempt (if applicable by design)
+        # The current code logs a generic "Retrying API error" or specific status error for warnings.
+        # For unexpected errors, it logs an error then proceeds to retry.
+        # Let's verify the warnings for retrying. The warnings are for retryable errors.
+        # The logger.info message "Waiting ...s before next retry" should be called.
+        assert self.mock_logger.info.call_count == self.prompt_instance.MAX_RETRIES -1
+        assert "Waiting" in self.mock_logger.info.call_args_list[0][0][0]

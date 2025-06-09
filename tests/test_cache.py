@@ -3,6 +3,8 @@ import sqlite3
 import os
 import json
 import hashlib
+import threading
+import time # For potential sleep in worker
 from unittest.mock import patch, MagicMock
 
 # Ensure this path allows importing from src
@@ -129,6 +131,70 @@ class TestCacheManager(unittest.TestCase):
         )
         retrieved_with_disabled_manager = self.cache_manager_disabled.get_cached_result("eval_for_disabled_get")
         self.assertIsNone(retrieved_with_disabled_manager, "Result should not be retrieved when cache is disabled.")
+
+    def test_06_cache_manager_thread_safety(self):
+        """Tests concurrent additions and reads to the cache."""
+        num_threads = 10
+        threads = []
+        eval_id_prefix = "thread_test_eval"
+
+        # Worker function to be executed by each thread
+        def worker(cache_manager_instance, thread_index):
+            eval_id = f"{eval_id_prefix}_{thread_index}"
+            model_name = f"model_thread_{thread_index}"
+            question_content = f"question_thread_{thread_index}"
+            prompt_name = f"prompt_thread_{thread_index}"
+            split = "test"
+            config = "main"
+            true_full = f"true_full_thread_{thread_index}"
+            true_ext = f"true_ext_thread_{thread_index}"
+
+            # Use a unique dict for each thread's response object
+            response_content = f"response_content_thread_{thread_index}"
+            model_response_obj = create_mock_chat_completion_dict(response_content)
+
+            model_ext = f"model_ext_thread_{thread_index}"
+            run_id = f"run_thread_{thread_index}"
+
+            # Add to cache
+            cache_manager_instance.add_result_to_cache(
+                eval_id=eval_id, model_name=model_name, gsm8k_question=question_content,
+                prompt_template_name=prompt_name, gsm8k_split=split, gsm8k_config=config,
+                dataset_full_expected_response=true_full, dataset_extracted_answer=true_ext,
+                model_full_response_obj=model_response_obj,
+                model_extracted_answer=model_ext, run_id=run_id
+            )
+
+            # Optional: short sleep to increase chance of interleaving if operations are too fast
+            # time.sleep(0.01)
+
+            # Get from cache
+            cached_result = cache_manager_instance.get_cached_result(eval_id)
+
+            self.assertIsNotNone(cached_result, f"Cache miss for eval_id {eval_id} in thread {thread_index}")
+            self.assertEqual(cached_result["model_name"], model_name, f"Data mismatch for model_name in thread {thread_index}")
+            self.assertEqual(cached_result["model_extracted_answer"], model_ext, f"Data mismatch for model_extracted_answer in thread {thread_index}")
+            stored_json = json.loads(cached_result["model_full_response_json"])
+            self.assertEqual(stored_json["choices"][0]["message"]["content"], response_content, f"Data mismatch for model_full_response_json in thread {thread_index}")
+
+        # Create and start threads
+        for i in range(num_threads):
+            thread = threading.Thread(target=worker, args=(self.cache_manager_enabled, i))
+            threads.append(thread)
+            thread.start()
+
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+
+        # Optional: Final verification - read all items and check count
+        # This is a bit redundant if worker assertions are good, but can be a sanity check.
+        conn = sqlite3.connect(self.DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT COUNT(*) FROM results WHERE eval_id LIKE '{eval_id_prefix}_%';")
+        count = cursor.fetchone()[0]
+        conn.close()
+        self.assertEqual(count, num_threads, "Number of items in DB after threading test does not match num_threads.")
 
 
 class TestGSM8KSolverWithCache(unittest.TestCase):
