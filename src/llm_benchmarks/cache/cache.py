@@ -12,7 +12,7 @@ class CacheManager:
         self.db_path = db_path
         self.use_cache = use_cache
         self._conn = None
-        self._lock = threading.Lock() # Initialize the lock
+        self._lock = threading.Lock()
         if self.use_cache:
             self._connect() # _connect itself doesn't need external lock if only called from init
 
@@ -24,7 +24,6 @@ class CacheManager:
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             self._conn = conn # Assign to self._conn once successfully connected
-            # self._conn.row_factory = sqlite3.Row # Allows accessing columns by name - moved above
         except sqlite3.Error as e:
             logger.error(f"Error connecting to SQLite database {self.db_path}: {e}")
             self._conn = None # Ensure connection is None if it fails
@@ -70,7 +69,6 @@ class CacheManager:
                 # If _conn exists, it will be closed by __exit__ or explicit close()
 
     def generate_eval_id(self, model_name: str, gsm8k_question_content: str, prompt_template_name: str, gsm8k_split: str, gsm8k_config: str) -> str:
-        # Create a stable string representation of the inputs
         unique_string = f"{model_name}-{gsm8k_question_content}-{prompt_template_name}-{gsm8k_split}-{gsm8k_config}"
         return hashlib.md5(unique_string.encode('utf-8')).hexdigest()
 
@@ -78,13 +76,12 @@ class CacheManager:
         if not self.use_cache:
             return None
 
-        with self._lock: # Acquire lock
+        with self._lock:
             if not self._conn:
                 return None
             try:
                 # 'with self._conn' for transaction atomicity if needed for read, though less critical
                 # For simple selects, it might be okay without it, but doesn't harm.
-                # cursor = self._conn.execute("SELECT * FROM results WHERE eval_id = ?", (eval_id,))
                 # For robustness with potential concurrent writes, ensure transaction context
                 with self._conn:
                     cursor = self._conn.execute("SELECT * FROM results WHERE eval_id = ?", (eval_id,))
@@ -118,7 +115,7 @@ class CacheManager:
 
         model_full_response_json = json.dumps(model_full_response_obj)
 
-        with self._lock: # Acquire lock
+        with self._lock:
             if not self._conn:
                 return
             try:

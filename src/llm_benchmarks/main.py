@@ -1,6 +1,6 @@
 import logging
 import os
-import uuid # For run_id
+import uuid
 from dotenv import load_dotenv
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -9,9 +9,8 @@ from .data import GSM8KDataset
 from .solvers import GSM8KSolver, GSM8KResult
 from .utils.args import parse_arguments
 from .utils.logging import setup_logging
-from llm_benchmarks.cache.cache import CacheManager # For caching
+from llm_benchmarks.cache.cache import CacheManager
 
-# Load environment variables from .env file
 load_dotenv()
 
 
@@ -31,14 +30,14 @@ def process_example(example_data: dict, solver: GSM8KSolver, logger: logging.Log
         )
         logger.debug(f"  Skipped Question: {result.question}")
         logger.debug(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
-        return False, True, result # is_correct, was_skipped, solve_result
+        return False, True, result
 
     is_correct = False
     if result.extracted_model_answer is not None and \
        result.extracted_model_answer == result.extracted_true_answer:
         is_correct = True
 
-    return is_correct, False, result # is_correct, was_skipped, solve_result
+    return is_correct, False, result
 
 
 def run_benchmarks(args, logger, dataset, solver: GSM8KSolver):
@@ -54,7 +53,7 @@ def run_benchmarks(args, logger, dataset, solver: GSM8KSolver):
 
     if num_to_run == 0:
         logger.info("No examples to run. The dataset might be empty or num_examples is 0.")
-        if total_processed_valid_gt == 0: # Changed variable name
+        if total_processed_valid_gt == 0:
              logger.info("\nNo examples were processed that had extractable ground truth answers.")
         return
 
@@ -81,8 +80,6 @@ def run_benchmarks(args, logger, dataset, solver: GSM8KSolver):
                     correct_answers += 1
             except Exception as e:
                 logger.error(f"An error occurred while processing an example: {e}", exc_info=True)
-                # Optionally, count this as a skipped or failed example
-                # skipped_examples_other_error +=1
 
 
     if total_processed_valid_gt > 0:
@@ -130,7 +127,7 @@ def main():
     # Ensure solver is initialized before run_benchmarks is called.
     # The existing logic for solver initialization based on args.no_cache is maintained.
 
-    solver: GSM8KSolver # type hint
+    solver: GSM8KSolver
 
     if args.no_cache:
         logger.info("Caching is disabled by --no-cache flag.")
@@ -138,7 +135,7 @@ def main():
         solver = GSM8KSolver(
             model_name=args.model_name,
             prompt_template=prompt_template_content,
-            cache_manager=None, # No caching
+            cache_manager=None,
             prompt_template_name=prompt_template_name, # Still useful for potential non-cache logging/identification
             data_split=args.data_split, # For context if needed, though cache is off
             data_config=args.data_config, # For context
@@ -146,7 +143,7 @@ def main():
         )
         run_benchmarks(args, logger, dataset, solver)
     else:
-        cache_db_path = "llm_benchmarks_cache.sqlite3" # Define path to SQLite DB
+        cache_db_path = "llm_benchmarks_cache.sqlite3"
         logger.info(f"Cache database path: {cache_db_path}")
         logger.info(f"Cache usage enabled (default or --cache flag used).")
 
@@ -157,7 +154,7 @@ def main():
             solver = GSM8KSolver(
                 model_name=args.model_name,
                 prompt_template=prompt_template_content,
-                cache_manager=cache_manager, # Pass the manager
+                cache_manager=cache_manager,
                 prompt_template_name=prompt_template_name, # For cache key generation
                 data_split=args.data_split, # For cache key generation
                 data_config=args.data_config, # For cache key generation
