@@ -160,3 +160,62 @@ class TestGSM8KDatasetIntegration:
         with pytest.raises(IndexError):
             # Try to access an item that is far beyond the dataset's size
             _ = dataset[9999]
+
+    def test_dataset_shuffle_integration(self):
+        """
+        Tests the shuffle functionality of the GSM8KDataset.
+        """
+        split = "test"
+        config = "main"
+        num_items_to_check = 3
+
+        # 1. Define expected first few items (questions) when not shuffled
+        expected_initial_questions = [
+            "Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?",
+            "A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?",
+            "Josh decides to try flipping a house.  He buys a house for $80,000 and then puts in $50,000 in repairs.  This increased the value of the house by 150%.  How much profit did he make?"
+        ]
+
+        # 2. Instantiate with shuffle=False (or default)
+        dataset_no_shuffle = GSM8KDataset(split=split, config=config, shuffle=False)
+        assert len(dataset_no_shuffle) >= num_items_to_check, "Dataset too small for test"
+
+        initial_items = [dataset_no_shuffle[i]["question"] for i in range(num_items_to_check)]
+
+        assert initial_items == expected_initial_questions, \
+            f"Initial items {initial_items} did not match expected {expected_initial_questions}"
+
+        # 3. Instantiate with shuffle=True
+        dataset_shuffled = GSM8KDataset(split=split, config=config, shuffle=True)
+        assert len(dataset_shuffled) >= num_items_to_check, "Shuffled dataset too small"
+
+        shuffled_items = [dataset_shuffled[i]["question"] for i in range(num_items_to_check)]
+
+        # 4. Assert that the order is different
+        # This assertion assumes that shuffling (with seed=42) will change the order
+        # of the first `num_items_to_check` items. This is highly probable for any reasonably sized dataset.
+        assert initial_items != shuffled_items, \
+            f"Shuffled items {shuffled_items} were the same as initial items {initial_items}. Shuffling might not have occurred."
+
+        # 5. Test that shuffling again produces a NEW different order
+        dataset_shuffled_again = GSM8KDataset(split=split, config=config, shuffle=True)
+        assert len(dataset_shuffled_again) >= num_items_to_check, "Second shuffled dataset too small"
+        shuffled_items_again = [dataset_shuffled_again[i]["question"] for i in range(num_items_to_check)]
+
+        # Assert that two separate shuffles produce different results.
+        # There's a very small theoretical chance of collision for small N, but highly unlikely here.
+        assert shuffled_items != shuffled_items_again, \
+            f"Two separate shuffles produced the same question order: {shuffled_items}."
+
+        # 6. Instantiate again with shuffle=False to ensure non-persistence of shuffle state
+        dataset_unshuffled_after_shuffle = GSM8KDataset(split=split, config=config, shuffle=False)
+        assert len(dataset_unshuffled_after_shuffle) >= num_items_to_check, "Dataset (unshuffled after shuffle) too small"
+
+        unshuffled_questions_after_shuffle = [dataset_unshuffled_after_shuffle[i]["question"] for i in range(num_items_to_check)]
+
+        # Assert that the items match the original predefined list (expected_initial_questions)
+        # This ensures that shuffle=True in the previous steps didn't somehow
+        # permanently alter the underlying data source for subsequent non-shuffled loads.
+        assert unshuffled_questions_after_shuffle == expected_initial_questions, \
+            f"Items after re-instantiating with shuffle=False {unshuffled_questions_after_shuffle} " \
+            f"did not match original expected questions {expected_initial_questions}."

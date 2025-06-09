@@ -50,6 +50,12 @@ def parse_arguments():
         help="Set the logging level. Must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL.",
         dest="log_level",
     )
+    parser.add_argument(
+        "--shuffle",
+        action="store_true",
+        help="Randomly shuffle the dataset before processing.",
+        dest="shuffle",
+    )
     # New argument
     parser.add_argument(
         "--no-cache",
