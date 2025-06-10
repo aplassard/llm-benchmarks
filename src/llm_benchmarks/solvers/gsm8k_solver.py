@@ -1,6 +1,7 @@
 import logging
 import re
 import json
+import asyncio # Added asyncio
 from llm_benchmarks.model.model import OpenRouterPrompt
 from llm_benchmarks.cache.cache import CacheManager
 from openai.types.chat.chat_completion import ChatCompletion
@@ -92,7 +93,7 @@ class GSM8KSolver:
             return extracted_answer
         return None
 
-    def solve(self, question: str, true_answer_full: str) -> GSM8KResult:
+    async def solve(self, question: str, true_answer_full: str) -> GSM8KResult: # Changed to async def
         logger.debug(f"Solving question for model {self.model_name}: {question[:100]}...")
         if self.data_split and self.data_config and self.prompt_template_name: # Log only if available
             logger.debug(f"Data split: {self.data_split}, config: {self.data_config}, prompt: {self.prompt_template_name}")
@@ -132,7 +133,7 @@ class GSM8KSolver:
         else:
              logger.debug(f"Caching not attempted or not configured. Executing model prompt for model {self.model_name}.")
 
-        model_response_obj: ChatCompletion | None = self.model.execute_prompt(content=question)
+        model_response_obj: ChatCompletion | None = await self.model.execute_prompt(content=question) # Added await
 
         model_response_text: str | None = None
         if model_response_obj:
@@ -195,5 +196,5 @@ class GSM8KSolver:
             extracted_true_answer=extracted_true_answer,
         )
 
-    def __call__(self, question: str, true_answer_full: str) -> GSM8KResult:
-        return self.solve(question, true_answer_full=true_answer_full)
+    async def __call__(self, question: str, true_answer_full: str) -> GSM8KResult: # Changed to async def
+        return await self.solve(question, true_answer_full=true_answer_full) # Added await

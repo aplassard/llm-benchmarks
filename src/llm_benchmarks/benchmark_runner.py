@@ -1,11 +1,12 @@
 import logging
 import os
 import uuid # For run_id
+import asyncio # Added asyncio
 from dotenv import load_dotenv
 from tqdm import tqdm
 
 from .data import GSM8KDataset
-from .solvers import GSM8KSolver
+from .solvers import GSM8KSolver, GSM8KResult # Added GSM8KResult
 from .utils.args import parse_arguments
 from .utils.logging import setup_logging
 from llm_benchmarks.cache.cache import CacheManager # For caching
@@ -14,9 +15,10 @@ from llm_benchmarks.cache.cache import CacheManager # For caching
 load_dotenv()
 
 
-def run_benchmarks(args, logger, dataset, solver: GSM8KSolver): # Added type hint for solver
+async def run_benchmarks(args, logger, dataset, solver: GSM8KSolver): # Changed to async def, added type hint
     correct_answers = 0
     total_examples = 0
+    tasks = []
 
     num_to_run = (
         len(dataset)
@@ -26,27 +28,38 @@ def run_benchmarks(args, logger, dataset, solver: GSM8KSolver): # Added type hin
 
     if num_to_run == 0:
         logger.info("No examples to run. The dataset might be empty or num_examples is 0.")
-        if total_examples == 0:
-             logger.info("\nNo examples were processed that had extractable ground truth answers.")
+        # This check was inside the original if, makes more sense here or after loop
+        # if total_examples == 0: # This condition will always be true here
+        #      logger.info("\nNo examples were processed that had extractable ground truth answers.")
         return
 
-    logger.info(f"Running benchmark on {num_to_run} examples...")
-    for i in tqdm(range(num_to_run), desc="Benchmarking Progress"):
+    logger.info(f"Preparing {num_to_run} examples for concurrent execution with concurrency limit {args.concurrency}...")
+    semaphore = asyncio.Semaphore(args.concurrency)
+
+    async def solve_with_semaphore(question_data: str, answer_data: str) -> GSM8KResult:
+        async with semaphore:
+            return await solver.solve(question_data, true_answer_full=answer_data)
+
+    for i in range(num_to_run):
         example = dataset[i]
         question = example["question"]
         true_answer_full = example["answer"]
+        tasks.append(solve_with_semaphore(question, true_answer_full))
 
-        result = solver.solve(question, true_answer_full)
+    logger.info(f"Running benchmark on {len(tasks)} examples concurrently (limit: {args.concurrency})...")
+    for future in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Benchmarking Progress"):
+        result: GSM8KResult = await future
 
         if result.extracted_true_answer is None:
+            # Using result.question as example index (i) is not directly available with as_completed
             logger.warning(
-                f"Could not extract ground truth answer for example {i+1} (Q: {result.question[:50]}...). Skipping."
+                f"Could not extract ground truth answer for question (Q: {result.question[:50]}...). Skipping."
             )
             logger.debug(f"  Skipped Question: {result.question}")
             logger.debug(f"  Full Ground Truth for Skipped: {result.true_answer_full}")
-            continue
+            continue # Skip this result from accuracy calculation
 
-        total_examples +=1
+        total_examples +=1 # Only count examples where true answer could be extracted
 
         if result.extracted_model_answer is not None and \
            result.extracted_model_answer == result.extracted_true_answer:
@@ -55,7 +68,7 @@ def run_benchmarks(args, logger, dataset, solver: GSM8KSolver): # Added type hin
     if total_examples > 0:
         accuracy = (correct_answers / total_examples) * 100
         logger.info("\n--- Benchmark Summary ---")
-        logger.info(f"Total examples processed: {total_examples}")
+        logger.info(f"Total examples processed (with extractable true answers): {total_examples}")
         logger.info(f"Correct answers: {correct_answers}")
         logger.info(f"Accuracy: {accuracy:.2f}%")
     else:
@@ -105,7 +118,7 @@ def main():
             data_config=None,
             run_id=None
         )
-        run_benchmarks(args, logger, dataset, solver)
+        asyncio.run(run_benchmarks(args, logger, dataset, solver)) # Changed to asyncio.run
     else:
         cache_db_path = "llm_benchmarks_cache.sqlite3"
         logger.info(f"Cache database path: {cache_db_path}")
@@ -124,7 +137,7 @@ def main():
                 data_config=args.data_config,
                 run_id=run_id
             )
-            run_benchmarks(args, logger, dataset, solver)
+            asyncio.run(run_benchmarks(args, logger, dataset, solver)) # Changed to asyncio.run
 
 
 if __name__ == "__main__":

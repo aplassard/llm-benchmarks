@@ -43,6 +43,13 @@ def parse_arguments():
         dest="data_config",
     )
     parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=10,
+        help="Set the maximum number of concurrent requests to the LLM API. Default is 10.",
+        dest="concurrency",
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         default="INFO",
