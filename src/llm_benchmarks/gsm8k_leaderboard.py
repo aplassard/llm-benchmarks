@@ -74,11 +74,16 @@ def load_and_process_data(db_path="llm_benchmarks_cache.sqlite3"):
 
     # Group and aggregate
     grouped_df = df.groupby(['model_name', 'prompt_template_name']).agg(
-        num_entries=('eval_id', 'count'),  # <-- This is the line to change
+        num_entries=('eval_id', 'count'),
         correct_count=('is_correct', 'sum'),
         total_prompt_tokens=('prompt_tokens', 'sum'),
         total_completion_tokens=('completion_tokens', 'sum'),
-        total_tokens_all_entries=('total_tokens', 'sum')
+        total_tokens_all_entries=('total_tokens', 'sum'),
+        median_prompt_tokens=('prompt_tokens', 'median'),
+        median_completion_tokens=('completion_tokens', 'median'),
+        median_total_tokens=('total_tokens', 'median'),
+        average_prompt_tokens=('prompt_tokens', 'mean'),
+        average_completion_tokens=('completion_tokens', 'mean')
     ).reset_index()
 
     # Calculate accuracy
@@ -98,7 +103,11 @@ def load_and_process_data(db_path="llm_benchmarks_cache.sqlite3"):
         'prompt_template_name': 'prompt_name',
         'total_tokens_all_entries': 'total_tokens_used',
         'total_prompt_tokens': 'total_prompt_tokens_used',
-        'total_completion_tokens': 'total_completion_tokens_used'
+        'total_completion_tokens': 'total_completion_tokens_used',
+        # Adding new columns to rename for clarity, though not strictly necessary
+        # if we use the new names directly in final_columns.
+        # However, it's good practice if there was a different desired final name.
+        # For this task, the aggregated names are fine.
     })
 
     final_columns = [
@@ -109,7 +118,12 @@ def load_and_process_data(db_path="llm_benchmarks_cache.sqlite3"):
         'total_tokens_used',
         'total_prompt_tokens_used',
         'total_completion_tokens_used',
-        'average_tokens_per_entry'
+        'average_tokens_per_entry',
+        'median_prompt_tokens',
+        'median_completion_tokens',
+        'median_total_tokens',
+        'average_prompt_tokens',
+        'average_completion_tokens'
     ]
     # Ensure all expected columns exist, add if missing (e.g. if no data for token usage)
     for col in final_columns:
@@ -190,6 +204,11 @@ def main():
     - **total_prompt_tokens_used**: Sum of prompt tokens.
     - **total_completion_tokens_used**: Sum of completion tokens.
     - **average_tokens_per_entry**: Average total tokens used per question.
+    - **median_prompt_tokens**: Median number of prompt tokens per entry.
+    - **median_completion_tokens**: Median number of completion tokens per entry.
+    - **median_total_tokens**: Median number of total tokens (prompt + completion) per entry.
+    - **average_prompt_tokens**: Average number of prompt tokens per entry.
+    - **average_completion_tokens**: Average number of completion tokens per entry.
     """)
 
     st.header("Leaderboard Results")
@@ -198,7 +217,15 @@ def main():
     else:
         # Displaying with st.dataframe for better default formatting and interactivity
         st.dataframe(
-            filtered_df.style.format({"accuracy": "{:.2%}", "average_tokens_per_entry": "{:.2f}"}),
+            filtered_df.style.format({
+                "accuracy": "{:.2%}",
+                "average_tokens_per_entry": "{:.2f}",
+                "median_prompt_tokens": "{:.0f}",
+                "median_completion_tokens": "{:.0f}",
+                "median_total_tokens": "{:.0f}",
+                "average_prompt_tokens": "{:.2f}",
+                "average_completion_tokens": "{:.2f}"
+            }),
             use_container_width=True
         )
 
