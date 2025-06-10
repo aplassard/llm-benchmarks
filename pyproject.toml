@@ -22,7 +22,6 @@ dependencies = [
 
 [project.scripts]
 gsm8k-benchmark-runner = "llm_benchmarks.benchmark_runner:main" # Renamed and updated path
-gsm8k-leaderboard = "llm_benchmarks.gsm8k_leaderboard:main" # Added new script
 
 [build-system]
 requires = ["setuptools>=61.0"]

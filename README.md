@@ -52,20 +52,13 @@ To run the GSM8K benchmark and populate the results cache:
 
 ## Viewing the Leaderboard
 
-After running the benchmarks, you can view the performance leaderboard:
+After running the benchmarks, you can view the performance leaderboard.
 
-1.  **Using the installed script:**
-    If you installed the package using `pip install -e .`, you can run:
-    ```bash
-    gsm8k-leaderboard
-    ```
-    This will start a Streamlit application in your web browser.
-
-2.  **Running with `streamlit run`:**
-    Alternatively, you can directly invoke Streamlit:
-    ```bash
-    streamlit run src/llm_benchmarks/gsm8k_leaderboard.py
-    ```
+To start the leaderboard, navigate to the project's root directory and execute the following command:
+```bash
+streamlit run src/llm_benchmarks/gsm8k_leaderboard.py
+```
+This will start the Streamlit application, and you can typically view it in your web browser at `http://localhost:8501`.
 
 The leaderboard displays aggregated results from the `llm_benchmarks_cache.sqlite3` file, allowing you to filter and compare different models and prompt templates. Ensure this database file exists and contains data from a benchmark run.
 
