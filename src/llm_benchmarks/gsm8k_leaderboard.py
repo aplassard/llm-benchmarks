@@ -74,7 +74,7 @@ def load_and_process_data(db_path="llm_benchmarks_cache.sqlite3"):
 
     # Group and aggregate
     grouped_df = df.groupby(['model_name', 'prompt_template_name']).agg(
-        num_entries=('id', 'count'),
+        num_entries=('eval_id', 'count'),  # <-- This is the line to change
         correct_count=('is_correct', 'sum'),
         total_prompt_tokens=('prompt_tokens', 'sum'),
         total_completion_tokens=('completion_tokens', 'sum'),
