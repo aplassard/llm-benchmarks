@@ -13,6 +13,20 @@ from src.llm_benchmarks.utils.prompt_utils import (
 # Define mock prompt contents
 MOCK_DEFAULT_CONTENT = "Mock default prompt content"
 MOCK_RIGOROUS_CONTENT = "Mock rigorous prompt content"
+MOCK_CHAIN_OF_THOUGHT_CONTENT = """Question: Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?
+
+Natalia sold 48 clips in April.
+In May, she sold half as many clips as in April, so she sold 48 / 2 = 24 clips.
+Altogether, she sold 48 + 24 = 72 clips.
+The final answer is 72
+
+Question: {content}
+
+Please think step by step and show your work before arriving at the solution. End your response with the phrase 'The final answer is X' where X is the numerical answer."""
+MOCK_LLAMA3_2_WEAKNESS_ADDRESSING_CONTENT = "Mock Llama 3.2 weakness addressing prompt"
+MOCK_SIMPLE_CONTENT = """Question: {content}
+
+Ensure your response ends with the phrase 'The final answer is X' where X is the numerical answer."""
 
 @pytest.fixture
 def temp_prompt_files(tmp_path):
@@ -21,6 +35,9 @@ def temp_prompt_files(tmp_path):
 
     (prompts_test_dir / "default.txt").write_text(MOCK_DEFAULT_CONTENT)
     (prompts_test_dir / "rigorous.txt").write_text(MOCK_RIGOROUS_CONTENT)
+    (prompts_test_dir / "chain_of_thought.txt").write_text(MOCK_CHAIN_OF_THOUGHT_CONTENT)
+    (prompts_test_dir / "llama3_2_weakness_addressing.txt").write_text(MOCK_LLAMA3_2_WEAKNESS_ADDRESSING_CONTENT)
+    (prompts_test_dir / "simple.txt").write_text(MOCK_SIMPLE_CONTENT)
     (prompts_test_dir / "another.txt").write_text("Another prompt")
     (prompts_test_dir / "not_a_prompt.md").write_text("This is not a prompt file")
 
@@ -44,6 +61,15 @@ def test_load_prompt_success(temp_prompt_files, monkeypatch):
     content_rigorous = load_prompt("rigorous")
     assert content_rigorous == MOCK_RIGOROUS_CONTENT
 
+    content_cot = load_prompt("chain_of_thought")
+    assert content_cot == MOCK_CHAIN_OF_THOUGHT_CONTENT
+
+    content_llama_weakness = load_prompt("llama3_2_weakness_addressing")
+    assert content_llama_weakness == MOCK_LLAMA3_2_WEAKNESS_ADDRESSING_CONTENT
+
+    content_simple = load_prompt("simple")
+    assert content_simple == MOCK_SIMPLE_CONTENT
+
 def test_load_prompt_file_not_found(temp_prompt_files, monkeypatch):
     """Tests FileNotFoundError for a non-existent prompt with monkeypatch."""
     monkeypatch.setattr('src.llm_benchmarks.utils.prompt_utils.PROMPT_DIR', str(temp_prompt_files))
@@ -58,7 +84,14 @@ def test_get_available_prompts(temp_prompt_files, monkeypatch):
     monkeypatch.setattr('src.llm_benchmarks.utils.prompt_utils.PROMPT_DIR', str(temp_prompt_files))
 
     available = get_available_prompts()
-    assert sorted(available) == sorted(["another", "default", "rigorous"])
+    assert sorted(available) == sorted([
+        "another",
+        "default",
+        "rigorous",
+        "chain_of_thought",
+        "llama3_2_weakness_addressing",
+        "simple"
+    ])
 
 def test_get_available_prompts_empty(tmp_path, monkeypatch):
     """Tests listing when the directory is empty or has no .txt files, with monkeypatch."""

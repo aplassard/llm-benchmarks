@@ -1,0 +1,3 @@
+Question: {content}
+
+Ensure your response ends with the phrase 'The final answer is X' where X is the numerical answer.
