@@ -110,7 +110,7 @@ class CacheManager:
                     dataset_full_expected_response, dataset_extracted_answer,
                     model_full_response_json, model_extracted_answer, run_id, datetime.now()
                 ))
-                logger.info(f"Result added to cache with eval_id: {eval_id}")
+                logger.debug(f"Result added to cache with eval_id: {eval_id}")
         except sqlite3.Error as e:
             logger.error(f"Error adding to cache for eval_id {eval_id}: {e}")
 
